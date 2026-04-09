@@ -1,5 +1,5 @@
 window.APP_CONFIG = {
-  apiBaseUrl: "PEGUE_AQUI_SU_URL_DE_VERCEL_API",
+  apiBaseUrl: "https://project-eraq5.vercel.app/api",
   businessName: "Almuerzos CEEP",
   maxDailyMeals: 15,
   refreshIntervalMs: 30000,
