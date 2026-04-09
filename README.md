@@ -58,3 +58,15 @@ Luego abra `http://localhost:8080`.
 1. Configurar la hoja y el Apps Script.
 2. Pegar la URL del Web App en `config.js`.
 3. Publicar esta carpeta en el hosting estatico de su preferencia.
+
+## Precio actual
+
+El precio esperado por almuerzo es `1000` colones. En la hoja `Settings`, use:
+
+- `menuPrice` = `1000`
+
+## Pruebas sin horario
+
+Si quiere desactivar temporalmente el limite de horario para hacer pruebas, en la hoja `Settings` use:
+
+- `disableSalesWindow` = `true`

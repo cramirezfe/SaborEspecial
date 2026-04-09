@@ -111,6 +111,7 @@ function buildDashboardSnapshot_() {
   const salesStart = settings.salesStart || '10:00';
   const salesEnd = settings.salesEnd || '12:00';
   const deliveryWindow = settings.deliveryWindow || '12:00 - 12:30';
+  const disableSalesWindow = parseBoolean_(settings.disableSalesWindow);
 
   const todayOrders = rows
     .map(mapOrderRow_)
@@ -128,7 +129,7 @@ function buildDashboardSnapshot_() {
   return {
     ok: true,
     updatedAt: new Date().toISOString(),
-    isSalesOpen: isSalesOpen_(now, salesStart, salesEnd, timezone) && availableMeals > 0,
+    isSalesOpen: (disableSalesWindow || isSalesOpen_(now, salesStart, salesEnd, timezone)) && availableMeals > 0,
     availableMeals: availableMeals,
     soldMeals: soldMeals,
     sinpeCount: counts.sinpe,
@@ -172,7 +173,7 @@ function getMenuFromSettings_(settings) {
   return {
     title: settings.menuTitle || 'Casado del dia',
     description: settings.menuDescription || 'Menu no configurado.',
-    price: Number(settings.menuPrice || 0)
+    price: Number(settings.menuPrice || 1000)
   };
 }
 
@@ -240,6 +241,11 @@ function normalizeTime_(value) {
 function formatTimestamp_(value, timezone) {
   if (!value) return '';
   return Utilities.formatDate(new Date(value), timezone, 'HH:mm');
+}
+
+function parseBoolean_(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'true' || normalized === '1' || normalized === 'si' || normalized === 'sí';
 }
 
 function parseJsonBody_(e) {

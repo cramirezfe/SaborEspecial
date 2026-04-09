@@ -15,9 +15,10 @@ En `Settings` agregue estas columnas:
 | salesStart | 10:00 |
 | salesEnd | 12:00 |
 | deliveryWindow | 12:00 - 12:30 |
+| disableSalesWindow | true |
 | menuTitle | Casado con pollo |
 | menuDescription | Arroz, frijoles, ensalada, pollo y fresco natural |
-| menuPrice | 2500 |
+| menuPrice | 1000 |
 | message | Venta maxima de 15 almuerzos por dia. |
 
 La hoja `Orders` se crea automaticamente cuando llegue la primera compra.
@@ -68,3 +69,13 @@ El sistema guarda:
 - Fecha y hora
 
 Si desea que Ana marque pagos SINPE como confirmados, puede editar la columna `paymentStatus` en la hoja `Orders`.
+
+## 7. Modo de pruebas
+
+Si quiere permitir pedidos fuera del horario mientras prueba la app, use en `Settings`:
+
+- `disableSalesWindow` = `true`
+
+Cuando quiera volver al comportamiento normal:
+
+- `disableSalesWindow` = `false`
