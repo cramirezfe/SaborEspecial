@@ -14,7 +14,6 @@
     helperTotalOrders: document.getElementById("helperTotalOrders"),
     helperPendingPaymentCount: document.getElementById("helperPendingPaymentCount"),
     helperPaidOrders: document.getElementById("helperPaidOrders"),
-    helperPaidPendingOrders: document.getElementById("helperPaidPendingOrders"),
     helperDeliveredOrders: document.getElementById("helperDeliveredOrders"),
     helperPendingOrders: document.getElementById("helperPendingOrders"),
     helperDeliveriesList: document.getElementById("helperDeliveriesList"),
@@ -161,7 +160,6 @@
     els.helperTotalOrders.textContent = String(snapshot.totalOrders || 0);
     els.helperPendingPaymentCount.textContent = String(snapshot.pendingPaymentCount || 0);
     els.helperPaidOrders.textContent = String(snapshot.paidOrders || 0);
-    els.helperPaidPendingOrders.textContent = String(snapshot.paidPendingDeliveryCount || 0);
     els.helperDeliveredOrders.textContent = String(snapshot.deliveredOrders || 0);
     els.helperPendingOrders.textContent = String(snapshot.pendingDeliveries || 0);
 
