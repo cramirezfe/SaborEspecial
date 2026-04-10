@@ -340,6 +340,9 @@ textarea {
   width: min(1080px, calc(100% - 2rem));
   margin: 0 auto;
   padding: 1.5rem 0 3rem;
+}
+
+.admin-content {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
   gap: 1.25rem;
@@ -349,6 +352,17 @@ textarea {
 .admin-hero {
   grid-column: 1 / -1;
   padding: 1rem 0 0.25rem;
+}
+
+.admin-gate {
+  max-width: 720px;
+  margin: 2rem auto 0;
+}
+
+.gate-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .admin-hero h1 {
@@ -425,7 +439,7 @@ textarea {
 }
 
 @media (max-width: 900px) {
-  .admin-layout {
+  .admin-content {
     grid-template-columns: 1fr;
   }
 

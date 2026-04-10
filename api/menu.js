@@ -22,6 +22,7 @@ export default async function handler(req, res) {
 
   try {
     const adminSecret = String(req.body?.adminSecret || "");
+    const validateOnly = Boolean(req.body?.validateOnly);
     const expectedSecret = String(process.env.ADMIN_SECRET || "");
     if (!expectedSecret) {
       return res.status(500).json({ ok: false, message: "Missing ADMIN_SECRET in Vercel." });
@@ -29,6 +30,10 @@ export default async function handler(req, res) {
 
     if (adminSecret !== expectedSecret) {
       return res.status(401).json({ ok: false, message: "Clave administrativa incorrecta." });
+    }
+
+    if (validateOnly) {
+      return res.status(200).json({ ok: true, message: "Acceso autorizado." });
     }
 
     const menu = req.body?.menu || {};

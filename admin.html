@@ -20,6 +20,30 @@
     </header>
 
     <main class="admin-layout">
+      <section id="adminGate" class="card admin-gate">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Acceso administrativo</p>
+            <h1>Ingrese la clave</h1>
+          </div>
+        </div>
+        <p class="admin-hero__text">
+          Esta página administra el menú del día. Ingrese la clave para continuar o vuelva al formulario público de solicitud.
+        </p>
+        <form id="gateForm" class="form">
+          <label>
+            Clave administrativa
+            <input id="gateSecret" name="gateSecret" type="password" maxlength="120" required autofocus>
+          </label>
+          <div class="gate-actions">
+            <button id="gateSubmitButton" type="submit" class="button">Ingresar</button>
+            <a class="button button--ghost" href="./index.html">Volver a inicio</a>
+          </div>
+          <p id="gateFeedback" class="feedback" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section id="adminContent" class="admin-content" hidden>
       <section class="admin-hero">
         <p class="eyebrow">Administración</p>
         <h1>Actualizar menú del día</h1>
@@ -89,6 +113,7 @@
             <strong id="currentDeliveryWindow">-</strong>
           </div>
         </div>
+      </section>
       </section>
     </main>
   </div>

@@ -3,6 +3,12 @@
 
   const config = window.APP_CONFIG || {};
   const els = {
+    adminGate: document.getElementById("adminGate"),
+    adminContent: document.getElementById("adminContent"),
+    gateForm: document.getElementById("gateForm"),
+    gateSecret: document.getElementById("gateSecret"),
+    gateSubmitButton: document.getElementById("gateSubmitButton"),
+    gateFeedback: document.getElementById("gateFeedback"),
     menuForm: document.getElementById("menuForm"),
     menuSubmitButton: document.getElementById("menuSubmitButton"),
     menuFeedback: document.getElementById("menuFeedback"),
@@ -19,6 +25,7 @@
   };
 
   let isSaving = false;
+  let adminSecret = "";
 
   function formatCurrency(amount) {
     return new Intl.NumberFormat("es-CR", {
@@ -31,6 +38,11 @@
   function setMenuFeedback(message, isError) {
     els.menuFeedback.textContent = message || "";
     els.menuFeedback.style.color = isError ? "#842f3d" : "#705d52";
+  }
+
+  function setGateFeedback(message, isError) {
+    els.gateFeedback.textContent = message || "";
+    els.gateFeedback.style.color = isError ? "#842f3d" : "#705d52";
   }
 
   function formatDateTime(value) {
@@ -71,6 +83,24 @@
     }
 
     return payload;
+  }
+
+  function unlockAdminArea(secret) {
+    adminSecret = secret;
+    els.adminGate.hidden = true;
+    els.adminContent.hidden = false;
+  }
+
+  async function validateAdminSecret(secret) {
+    const result = await fetchJson("/menu", {
+      method: "POST",
+      body: {
+        adminSecret: secret,
+        validateOnly: true
+      }
+    });
+
+    return result;
   }
 
   function renderSnapshot(snapshot) {
@@ -115,6 +145,8 @@
     if (isSaving) return;
 
     const payload = getMenuPayload();
+    payload.adminSecret = adminSecret;
+
     if (!payload.adminSecret || !payload.title || !payload.description || payload.price < 0) {
       setMenuFeedback("Complete la clave, el nombre, la descripcion y el precio.", true);
       return;
@@ -151,9 +183,37 @@
     }
   }
 
+  async function submitGate(event) {
+    event.preventDefault();
+    const secret = String(els.gateSecret.value || "").trim();
+
+    if (!secret) {
+      setGateFeedback("Ingrese la clave administrativa.", true);
+      return;
+    }
+
+    els.gateSubmitButton.disabled = true;
+    setGateFeedback("Verificando acceso...", false);
+
+    try {
+      const result = await validateAdminSecret(secret);
+      if (!result.ok) {
+        throw new Error(result.message || "No se pudo validar la clave.");
+      }
+
+      unlockAdminArea(secret);
+      setMenuFeedback("");
+      await refreshSnapshot();
+    } catch (error) {
+      setGateFeedback(error.message, true);
+    } finally {
+      els.gateSubmitButton.disabled = false;
+    }
+  }
+
   function start() {
+    els.gateForm.addEventListener("submit", submitGate);
     els.menuForm.addEventListener("submit", submitMenu);
-    refreshSnapshot();
   }
 
   start();
