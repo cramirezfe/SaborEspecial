@@ -467,13 +467,15 @@ textarea {
 .delivery-table__cell {
   min-width: 0;
   display: grid;
+  grid-template-rows: minmax(3.5rem, auto) minmax(2.6rem, auto);
   gap: 0.45rem;
-  align-items: center;
+  align-items: start;
   justify-items: center;
 }
 
 .delivery-table__cell:first-child {
   justify-items: start;
+  grid-template-rows: auto auto;
 }
 
 .delivery-summary-grid {
@@ -570,6 +572,7 @@ textarea {
   font-size: 0.82rem;
   font-weight: 700;
   text-align: center;
+  min-height: 2.6rem;
 }
 
 .delivery-table__empty {

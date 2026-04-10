@@ -25,22 +25,8 @@ function ensureAuthorized(req, res) {
 function formatTimestamp(value) {
   if (!value) return "";
 
-  return new Intl.DateTimeFormat("es-CR", {
-    timeZone: "America/Costa_Rica",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(new Date(value));
-}
-
-function formatDateTime(value) {
-  if (!value) return "";
-
   const parts = new Intl.DateTimeFormat("es-CR", {
     timeZone: "America/Costa_Rica",
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
     hour: "numeric",
     minute: "2-digit",
     hour12: true
@@ -51,21 +37,14 @@ function formatDateTime(value) {
     return part ? part.value : "";
   }
 
-  const weekday = get("weekday");
-  const capitalizedWeekday = weekday ? weekday.charAt(0).toUpperCase() + weekday.slice(1) : "";
   const dayPeriod = get("dayPeriod").replace(/\./g, "").toUpperCase();
+  return `${get("hour")}:${get("minute")} ${dayPeriod}`;
+}
 
-  return [
-    capitalizedWeekday,
-    get("day"),
-    "de",
-    get("month"),
-    "del",
-    get("year"),
-    "a las",
-    `${get("hour")}:${get("minute")}`,
-    dayPeriod
-  ].join(" ");
+function formatDateTime(value) {
+  if (!value) return "";
+
+  return formatTimestamp(value);
 }
 
 function getPaymentStatusLabel(paymentStatus) {
