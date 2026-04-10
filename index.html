@@ -84,11 +84,15 @@
 
         <label>
           Método de pago
-          <select id="paymentMethod" name="paymentMethod" required>
-            <option value="">Seleccione una opción</option>
-            <option value="SINPE">SINPE móvil</option>
-            <option value="EFECTIVO">Efectivo</option>
-          </select>
+          <input id="paymentMethod" name="paymentMethod" type="hidden" required>
+          <div class="payment-methods" role="radiogroup" aria-label="Metodo de pago">
+            <button type="button" class="payment-option" data-payment-method="SINPE" aria-pressed="false">
+              SINPE móvil
+            </button>
+            <button type="button" class="payment-option" data-payment-method="EFECTIVO" aria-pressed="false">
+              Efectivo
+            </button>
+          </div>
         </label>
 
         <label>

@@ -227,6 +227,32 @@ textarea {
   border: 1px solid rgba(131, 47, 61, 0.2);
 }
 
+.payment-methods {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.payment-option {
+  padding: 0.95rem 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(131, 47, 61, 0.22);
+  background: #fffdf9;
+  color: var(--primary-dark);
+  font-weight: 700;
+}
+
+.payment-option:hover,
+.payment-option:focus-visible {
+  background: #f6e2e5;
+}
+
+.payment-option.is-selected {
+  background: var(--primary-dark);
+  color: #fffaf5;
+  border-color: var(--primary-dark);
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -303,5 +329,9 @@ textarea {
   .buyer-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .payment-methods {
+    grid-template-columns: 1fr;
   }
 }

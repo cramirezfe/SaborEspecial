@@ -32,6 +32,8 @@
     menuTitleInput: document.getElementById("menuTitleInput"),
     menuDescriptionInput: document.getElementById("menuDescriptionInput"),
     menuPriceInput: document.getElementById("menuPriceInput"),
+    paymentMethodInput: document.getElementById("paymentMethod"),
+    paymentOptions: Array.from(document.querySelectorAll(".payment-option")),
     refreshButton: document.getElementById("refreshButton"),
     buyerRowTemplate: document.getElementById("buyerRowTemplate")
   };
@@ -222,6 +224,15 @@
     };
   }
 
+  function selectPaymentMethod(method) {
+    els.paymentMethodInput.value = method || "";
+    els.paymentOptions.forEach(function (button) {
+      const isSelected = button.dataset.paymentMethod === method;
+      button.classList.toggle("is-selected", isSelected);
+      button.setAttribute("aria-pressed", isSelected ? "true" : "false");
+    });
+  }
+
   function getMenuPayload() {
     const formData = new FormData(els.menuForm);
     return {
@@ -258,6 +269,7 @@
       }
 
       els.orderForm.reset();
+      selectPaymentMethod("");
       setFeedback(result.message || "Compra registrada correctamente.", false);
       if (result.snapshot) {
         saveCachedSnapshot(result.snapshot);
@@ -340,6 +352,11 @@
     }
 
     els.orderForm.addEventListener("submit", submitOrder);
+    els.paymentOptions.forEach(function (button) {
+      button.addEventListener("click", function () {
+        selectPaymentMethod(button.dataset.paymentMethod);
+      });
+    });
     els.menuForm.addEventListener("submit", submitMenu);
     els.refreshButton.addEventListener("click", function () {
       refreshSnapshot(true);
