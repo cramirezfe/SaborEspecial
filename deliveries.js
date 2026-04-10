@@ -17,7 +17,6 @@
     deliveriesPendingOrders: document.getElementById("deliveriesPendingOrders"),
     deliveriesDeliveredOrders: document.getElementById("deliveriesDeliveredOrders"),
     deliveriesList: document.getElementById("deliveriesList"),
-    deliveriesRefreshButton: document.getElementById("deliveriesRefreshButton"),
     deliveryRowTemplate: document.getElementById("deliveryRowTemplate")
   };
 
@@ -38,12 +37,36 @@
     if (!value) return "Sin datos recientes";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "Sin datos recientes";
-    return "Actualizado " + new Intl.DateTimeFormat("es-CR", {
+
+    const formatter = new Intl.DateTimeFormat("es-CR", {
+      timeZone: "America/Costa_Rica",
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
       hour: "numeric",
       minute: "2-digit",
-      day: "2-digit",
-      month: "2-digit"
-    }).format(date);
+      hour12: true
+    });
+
+    const parts = formatter.formatToParts(date);
+    const get = function (type) {
+      const part = parts.find(function (item) {
+        return item.type === type;
+      });
+      return part ? part.value : "";
+    };
+
+    const weekday = get("weekday");
+    const capitalizedWeekday = weekday ? weekday.charAt(0).toUpperCase() + weekday.slice(1) : "";
+    const day = get("day");
+    const month = get("month");
+    const year = get("year");
+    const hour = get("hour");
+    const minute = get("minute");
+    const dayPeriod = get("dayPeriod").replace(/\./g, "").toUpperCase();
+
+    return "Actualizado " + [capitalizedWeekday, day, "de", month, "del", year, "a las", hour + ":" + minute, dayPeriod].join(" ");
   }
 
   async function fetchJson(path, options) {
@@ -169,11 +192,6 @@
 
   function start() {
     els.deliveriesGateForm.addEventListener("submit", submitGate);
-    els.deliveriesRefreshButton.addEventListener("click", function () {
-      refreshSnapshot().catch(function (error) {
-        setGateFeedback(error.message, true);
-      });
-    });
 
     window.setInterval(function () {
       if (!ordersPassword || els.deliveriesContent.hidden) return;

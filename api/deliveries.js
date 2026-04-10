@@ -35,14 +35,37 @@ function formatTimestamp(value) {
 function formatDateTime(value) {
   if (!value) return "";
 
-  return new Intl.DateTimeFormat("es-CR", {
+  const parts = new Intl.DateTimeFormat("es-CR", {
     timeZone: "America/Costa_Rica",
-    day: "2-digit",
-    month: "2-digit",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
     year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(new Date(value));
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+  }).formatToParts(new Date(value));
+
+  function get(type) {
+    const part = parts.find((item) => item.type === type);
+    return part ? part.value : "";
+  }
+
+  const weekday = get("weekday");
+  const capitalizedWeekday = weekday ? weekday.charAt(0).toUpperCase() + weekday.slice(1) : "";
+  const dayPeriod = get("dayPeriod").replace(/\./g, "").toUpperCase();
+
+  return [
+    capitalizedWeekday,
+    get("day"),
+    "de",
+    get("month"),
+    "del",
+    get("year"),
+    "a las",
+    `${get("hour")}:${get("minute")}`,
+    dayPeriod
+  ].join(" ");
 }
 
 function getPaymentStatusLabel(paymentStatus) {
