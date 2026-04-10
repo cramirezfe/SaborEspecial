@@ -91,7 +91,7 @@
     els.deliveriesList.innerHTML = "";
 
     if (!orders || orders.length === 0) {
-      els.deliveriesList.innerHTML = '<p class="empty-state">No hay compras registradas todavía.</p>';
+      els.deliveriesList.innerHTML = '<div class="delivery-table__empty">No hay compras registradas todavía.</div>';
       return;
     }
 
