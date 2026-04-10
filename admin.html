@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administración | Almuerzos CEEP</title>
+  <meta name="description" content="Página administrativa para actualizar el menú del día.">
+  <meta name="theme-color" content="#a33d4d">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="site-shell">
+    <header class="site-header">
+      <a href="./index.html" class="site-brand">Almuerzos CEEP</a>
+      <nav class="site-nav" aria-label="Principal">
+        <a class="site-nav__link" href="./index.html">Inicio</a>
+        <a class="site-nav__link is-active" href="./admin.html">Administración</a>
+      </nav>
+    </header>
+
+    <main class="admin-layout">
+      <section class="admin-hero">
+        <p class="eyebrow">Administración</p>
+        <h1>Actualizar menú del día</h1>
+        <p class="admin-hero__text">
+          Registre el menú más reciente sin entrar a MongoDB. El cambio se guarda en la base de datos y se refleja en la página pública.
+        </p>
+      </section>
+
+      <section class="card admin-card">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Formulario</p>
+            <h2>Menú de hoy</h2>
+          </div>
+          <span id="adminUpdatedAt" class="muted">Sincronizando...</span>
+        </div>
+
+        <form id="menuForm" class="form">
+          <label>
+            Clave administrativa
+            <input id="adminSecret" name="adminSecret" type="password" maxlength="120" required>
+          </label>
+
+          <label>
+            Nombre del menú
+            <input id="menuTitleInput" name="title" type="text" maxlength="120" required>
+          </label>
+
+          <label>
+            Descripción
+            <textarea id="menuDescriptionInput" name="description" rows="4" maxlength="250" required></textarea>
+          </label>
+
+          <label>
+            Precio en colones
+            <input id="menuPriceInput" name="price" type="number" min="0" step="1" required>
+          </label>
+
+          <button id="menuSubmitButton" type="submit" class="button">Guardar menú de hoy</button>
+          <p id="menuFeedback" class="feedback" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="card admin-card admin-card--summary">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Vista actual</p>
+            <h2 id="currentMenuTitle">Cargando menú...</h2>
+          </div>
+          <div class="availability">
+            <span class="availability__label">Disponibles</span>
+            <strong id="currentAvailableMeals">0</strong>
+          </div>
+        </div>
+        <p id="currentMenuDescription" class="menu-description">Esperando datos del servidor.</p>
+        <div class="menu-details">
+          <div>
+            <span class="detail-label">Precio</span>
+            <strong id="currentMenuPrice">-</strong>
+          </div>
+          <div>
+            <span class="detail-label">Venta</span>
+            <strong id="currentSalesWindow">-</strong>
+          </div>
+          <div>
+            <span class="detail-label">Entrega</span>
+            <strong id="currentDeliveryWindow">-</strong>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./admin.js" defer></script>
+</body>
+</html>

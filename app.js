@@ -4,8 +4,7 @@
   const config = window.APP_CONFIG || {};
   const state = {
     snapshot: null,
-    isSubmitting: false,
-    isSavingMenu: false
+    isSubmitting: false
   };
 
   const els = {
@@ -26,12 +25,6 @@
     orderForm: document.getElementById("orderForm"),
     submitButton: document.getElementById("submitButton"),
     formFeedback: document.getElementById("formFeedback"),
-    menuForm: document.getElementById("menuForm"),
-    menuSubmitButton: document.getElementById("menuSubmitButton"),
-    menuFeedback: document.getElementById("menuFeedback"),
-    menuTitleInput: document.getElementById("menuTitleInput"),
-    menuDescriptionInput: document.getElementById("menuDescriptionInput"),
-    menuPriceInput: document.getElementById("menuPriceInput"),
     paymentMethodInput: document.getElementById("paymentMethod"),
     paymentOptions: Array.from(document.querySelectorAll(".payment-option")),
     refreshButton: document.getElementById("refreshButton"),
@@ -61,11 +54,6 @@
   function setFeedback(message, isError) {
     els.formFeedback.textContent = message || "";
     els.formFeedback.style.color = isError ? "#842f3d" : "#705d52";
-  }
-
-  function setMenuFeedback(message, isError) {
-    els.menuFeedback.textContent = message || "";
-    els.menuFeedback.style.color = isError ? "#842f3d" : "#705d52";
   }
 
   function loadCachedSnapshot() {
@@ -141,11 +129,6 @@
     els.menuTitle.textContent = menu.title || "Menú no configurado";
     els.menuDescription.textContent = menu.description || "No hay descripción disponible.";
     els.menuPrice.textContent = formatCurrency(menu.price);
-    if (!state.isSavingMenu) {
-      els.menuTitleInput.value = menu.title || "";
-      els.menuDescriptionInput.value = menu.description || "";
-      els.menuPriceInput.value = menu.price || "";
-    }
     els.deliveryWindow.textContent = snapshot.deliveryWindow || "12:00 m. - 12:30 p. m.";
     els.salesWindow.textContent = snapshot.salesWindow || "10:00 a. m. - 12:00 m.";
     els.dailyMessage.textContent = snapshot.message || "La cantidad máxima es de 15 almuerzos por día.";
@@ -233,16 +216,6 @@
     });
   }
 
-  function getMenuPayload() {
-    const formData = new FormData(els.menuForm);
-    return {
-      adminSecret: String(formData.get("adminSecret") || "").trim(),
-      title: String(formData.get("title") || "").trim(),
-      description: String(formData.get("description") || "").trim(),
-      price: Number(formData.get("price") || 0)
-    };
-  }
-
   async function submitOrder(event) {
     event.preventDefault();
 
@@ -289,54 +262,6 @@
     }
   }
 
-  async function submitMenu(event) {
-    event.preventDefault();
-
-    if (state.isSavingMenu) return;
-
-    const payload = getMenuPayload();
-    if (!payload.adminSecret || !payload.title || !payload.description || payload.price < 0) {
-      setMenuFeedback("Complete la clave, el nombre, la descripcion y el precio.", true);
-      return;
-    }
-
-    state.isSavingMenu = true;
-    els.menuSubmitButton.disabled = true;
-    setMenuFeedback("Guardando menú del día...", false);
-
-    try {
-      const result = await fetchJson("/menu", {
-        method: "POST",
-        body: {
-          adminSecret: payload.adminSecret,
-          menu: {
-            title: payload.title,
-            description: payload.description,
-            price: payload.price
-          }
-        }
-      });
-
-      if (!result.ok) {
-        throw new Error(result.message || "No se pudo guardar el menu.");
-      }
-
-      els.menuForm.reset();
-      setMenuFeedback(result.message || "Menú actualizado correctamente.", false);
-      if (result.snapshot) {
-        saveCachedSnapshot(result.snapshot);
-        renderSnapshot(result.snapshot, false);
-      } else {
-        await refreshSnapshot(false);
-      }
-    } catch (error) {
-      setMenuFeedback(error.message, true);
-    } finally {
-      state.isSavingMenu = false;
-      els.menuSubmitButton.disabled = false;
-    }
-  }
-
   function registerServiceWorker() {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("./sw.js").catch(function () {
@@ -357,7 +282,6 @@
         selectPaymentMethod(button.dataset.paymentMethod);
       });
     });
-    els.menuForm.addEventListener("submit", submitMenu);
     els.refreshButton.addEventListener("click", function () {
       refreshSnapshot(true);
     });
