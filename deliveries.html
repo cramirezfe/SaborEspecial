@@ -71,34 +71,16 @@
               <strong id="deliveriesPendingOrders" class="delivery-summary__alert">0</strong>
             </article>
           </div>
-
-          <div class="delivery-meta-row">
-            <div class="delivery-meta-pill">
-              <span class="detail-label">Precio</span>
-              <strong id="deliveriesMenuPrice">-</strong>
-            </div>
-            <div class="delivery-meta-pill">
-              <span class="detail-label">Venta</span>
-              <strong id="deliveriesSalesWindow">-</strong>
-            </div>
-            <div class="delivery-meta-pill">
-              <span class="detail-label">Entrega</span>
-              <strong id="deliveriesDeliveryWindow">-</strong>
-            </div>
-            <div class="delivery-meta-pill">
-              <span class="detail-label">Total cobrado</span>
-              <strong id="deliveriesTotalAmount">0</strong>
-            </div>
-          </div>
         </section>
 
         <section class="card delivery-table-card">
           <div class="delivery-table">
             <div class="delivery-table__head">
               <span>PEDIDO</span>
+              <span>SOLICITUD</span>
               <span>ESTADO DEL PAGO</span>
-              <span>ENTREGA</span>
-              <span>FECHA Y HORA DE ENTREGADO</span>
+              <span>PENDIENTE</span>
+              <span>ENTREGADO</span>
             </div>
             <div id="deliveriesList" class="delivery-table__body">
               <p class="empty-state">No hay compras registradas todavía.</p>
@@ -112,20 +94,22 @@
   <template id="deliveryRowTemplate">
     <article class="delivery-table__row">
       <div class="delivery-table__cell">
-        <strong class="buyer-name"></strong>
-        <p class="buyer-meta"></p>
+        <strong class="buyer-name delivery-name-card"></strong>
+      </div>
+      <div class="delivery-table__cell">
+        <strong class="delivery-status-title delivery-order-status"></strong>
+        <p class="delivery-status-time delivery-created-at"></p>
       </div>
       <div class="delivery-table__cell">
         <span class="delivery-payment-status"></span>
+        <p class="delivery-status-time delivery-payment-confirmed-at"></p>
       </div>
       <div class="delivery-table__cell">
-        <div class="delivery-actions" role="group" aria-label="Estado de entrega">
-          <button type="button" class="delivery-action" data-delivery-status="PENDIENTE_ENTREGA">Pendiente</button>
-          <button type="button" class="delivery-action" data-delivery-status="ENTREGADO">Entregado</button>
-        </div>
+        <button type="button" class="delivery-action" data-delivery-status="PENDIENTE_ENTREGA">Pendiente</button>
       </div>
       <div class="delivery-table__cell">
-        <strong class="delivery-delivered-at">-</strong>
+        <button type="button" class="delivery-action" data-delivery-status="ENTREGADO">Entregado</button>
+        <p class="delivery-status-time delivery-delivered-at">-</p>
       </div>
     </article>
   </template>

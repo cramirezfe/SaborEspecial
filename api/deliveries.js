@@ -45,6 +45,14 @@ function formatDateTime(value) {
   }).format(new Date(value));
 }
 
+function getPaymentStatusLabel(paymentStatus) {
+  const normalized = String(paymentStatus || "").toUpperCase();
+  if (["PAGADO", "CONFIRMADO", "CONFIRMADO_SINPE"].includes(normalized)) {
+    return "PAGADO";
+  }
+  return "PENDIENTE DE PAGO";
+}
+
 function buildDeliveriesSnapshot(settingsDoc, menuDoc, orders) {
   const totalOrders = orders.length;
   const deliveredOrders = orders.filter((item) => item.deliveryStatus === "ENTREGADO").length;
@@ -69,9 +77,12 @@ function buildDeliveriesSnapshot(settingsDoc, menuDoc, orders) {
       id: String(item._id),
       buyerName: item.buyerName,
       paymentMethod: item.paymentMethod,
-      paymentStatus: item.paymentStatus,
+      paymentStatus: getPaymentStatusLabel(item.paymentStatus),
+      orderStatus: item.orderStatus || "SOLICITADO",
       deliveryStatus: item.deliveryStatus || "PENDIENTE_ENTREGA",
       timestampLabel: formatTimestamp(item.createdAt),
+      createdAtLabel: formatDateTime(item.createdAt),
+      paymentConfirmedAtLabel: item.paymentConfirmedAt ? formatDateTime(item.paymentConfirmedAt) : "",
       deliveredAtLabel: item.deliveredAt ? formatDateTime(item.deliveredAt) : ""
     }))
   };

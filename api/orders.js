@@ -9,19 +9,24 @@ function validateOrder(order) {
 }
 
 function normalizeOrder(order, menu, dayKey) {
+  const createdAt = new Date();
+  const isCash = String(order.paymentMethod || "").trim() === "EFECTIVO";
+
   return {
-    createdAt: new Date(),
+    createdAt,
     dayKey,
     buyerName: String(order.buyerName || "").trim(),
     buyerId: String(order.buyerId || "").trim(),
     buyerPhone: String(order.buyerPhone || "").trim(),
     paymentMethod: String(order.paymentMethod || "").trim(),
-    paymentStatus: order.paymentMethod === "SINPE" ? "POR_VERIFICAR" : "PENDIENTE_ENTREGA",
+    paymentStatus: isCash ? "PAGADO" : "PENDIENTE_DE_PAGO",
+    paymentConfirmedAt: isCash ? createdAt : null,
     paymentReference: String(order.paymentReference || "").trim(),
     notes: String(order.notes || "").trim(),
     menuTitle: menu?.title || "Menu no configurado",
     menuDescription: menu?.description || "",
     menuPrice: Number(menu?.price || 1000),
+    orderStatus: "SOLICITADO",
     deliveryStatus: "PENDIENTE_ENTREGA",
     deliveredAt: null,
     recordStatus: "ACTIVO"

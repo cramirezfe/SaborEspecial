@@ -432,7 +432,7 @@ textarea {
 .delivery-table__head,
 .delivery-table__row {
   display: grid;
-  grid-template-columns: minmax(160px, 1.1fr) minmax(180px, 1fr) minmax(260px, 1fr) minmax(200px, 1fr);
+  grid-template-columns: minmax(220px, 1.2fr) minmax(180px, 0.8fr) minmax(220px, 1fr) minmax(180px, 0.8fr) minmax(210px, 0.95fr);
   gap: 0.75rem;
   align-items: center;
 }
@@ -456,6 +456,9 @@ textarea {
 
 .delivery-table__cell {
   min-width: 0;
+  display: grid;
+  gap: 0.45rem;
+  align-items: center;
 }
 
 .delivery-summary-grid {
@@ -494,10 +497,12 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 100%;
-  padding: 0.8rem 1rem;
+  min-width: 220px;
+  padding: 0.8rem 1.2rem;
   font-weight: 800;
   color: #fff;
+  border-radius: 999px;
+  text-align: center;
 }
 
 .delivery-payment-status--pending {
@@ -506,6 +511,26 @@ textarea {
 
 .delivery-payment-status--paid {
   background: #49ad2d;
+}
+
+.delivery-name-card {
+  display: inline-block;
+  background: rgba(255, 250, 245, 0.95);
+  padding: 0.9rem 1rem;
+  font-size: 1rem;
+}
+
+.delivery-status-title {
+  font-size: 0.98rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.delivery-status-time {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
 }
 
 .delivery-meta-row {

@@ -38,16 +38,8 @@
     els.deliveriesGateFeedback.style.color = isError ? "#842f3d" : "#705d52";
   }
 
-  function getPaymentLabel(paymentStatus) {
-    const normalized = String(paymentStatus || "").toUpperCase();
-    if (["PAGADO", "CONFIRMADO", "CONFIRMADO_SINPE"].includes(normalized)) {
-      return "PAGADO";
-    }
-    return "PENDIENTE DE PAGO";
-  }
-
   function getPaymentClass(paymentStatus) {
-    return getPaymentLabel(paymentStatus) === "PAGADO"
+    return String(paymentStatus || "").toUpperCase() === "PAGADO"
       ? "delivery-payment-status delivery-payment-status--paid"
       : "delivery-payment-status delivery-payment-status--pending";
   }
@@ -107,12 +99,13 @@
     orders.forEach(function (order) {
       const node = els.deliveryRowTemplate.content.cloneNode(true);
       node.querySelector(".buyer-name").textContent = order.buyerName;
-      node.querySelector(".buyer-meta").textContent =
-        [order.paymentMethod, order.timestampLabel].filter(Boolean).join(" | ");
+      node.querySelector(".delivery-order-status").textContent = order.orderStatus || "SOLICITADO";
+      node.querySelector(".delivery-created-at").textContent = order.createdAtLabel || "";
       const paymentNode = node.querySelector(".delivery-payment-status");
-      paymentNode.textContent = getPaymentLabel(order.paymentStatus);
+      paymentNode.textContent = order.paymentStatus || "PENDIENTE DE PAGO";
       paymentNode.className = getPaymentClass(order.paymentStatus);
-      node.querySelector(".delivery-delivered-at").textContent = order.deliveredAtLabel || "-";
+      node.querySelector(".delivery-payment-confirmed-at").textContent = order.paymentConfirmedAtLabel || "";
+      node.querySelector(".delivery-delivered-at").textContent = order.deliveredAtLabel || "";
 
       node.querySelectorAll(".delivery-action").forEach(function (button) {
         const isSelected = button.dataset.deliveryStatus === order.deliveryStatus;
