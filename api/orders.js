@@ -3,7 +3,7 @@ import { buildDashboardSnapshot, getDayKey, getTodayOrdersQuery, parseBoolean } 
 import { handleOptions, setCors } from "../lib/http.js";
 
 function validateOrder(order) {
-  if (!order.buyerName || !order.buyerId || !order.buyerPhone || !order.paymentMethod) {
+  if (!order.buyerName || !order.paymentMethod) {
     throw new Error("Faltan datos obligatorios.");
   }
 }
@@ -16,13 +16,13 @@ function normalizeOrder(order, menu, dayKey) {
     createdAt,
     dayKey,
     buyerName: String(order.buyerName || "").trim(),
-    buyerId: String(order.buyerId || "").trim(),
-    buyerPhone: String(order.buyerPhone || "").trim(),
+    buyerId: "",
+    buyerPhone: "",
     paymentMethod: String(order.paymentMethod || "").trim(),
     paymentStatus: isCash ? "PAGADO" : "PENDIENTE_DE_PAGO",
     paymentConfirmedAt: isCash ? createdAt : null,
-    paymentReference: String(order.paymentReference || "").trim(),
-    notes: String(order.notes || "").trim(),
+    paymentReference: "",
+    notes: "",
     menuTitle: menu?.title || "Menu no configurado",
     menuDescription: menu?.description || "",
     menuPrice: Number(menu?.price || 1000),

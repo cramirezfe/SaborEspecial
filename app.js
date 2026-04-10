@@ -9,13 +9,9 @@
   };
 
   const els = {
-    statusBadge: document.getElementById("statusBadge"),
-    updatedAt: document.getElementById("updatedAt"),
     menuTitle: document.getElementById("menuTitle"),
     menuDescription: document.getElementById("menuDescription"),
     menuPrice: document.getElementById("menuPrice"),
-    deliveryWindow: document.getElementById("deliveryWindow"),
-    salesWindow: document.getElementById("salesWindow"),
     dailyMessage: document.getElementById("dailyMessage"),
     availableCount: document.getElementById("availableCount"),
     soldCount: document.getElementById("soldCount"),
@@ -64,18 +60,6 @@
     }).format(Number(amount || 0));
   }
 
-  function formatDateTime(value) {
-    if (!value) return "Sin datos recientes";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "Sin datos recientes";
-    return "Actualizado " + new Intl.DateTimeFormat("es-CR", {
-      hour: "numeric",
-      minute: "2-digit",
-      day: "2-digit",
-      month: "2-digit"
-    }).format(date);
-  }
-
   function setFeedback(message, isError) {
     els.formFeedback.textContent = message || "";
     els.formFeedback.style.color = isError ? "#842f3d" : "#705d52";
@@ -96,29 +80,6 @@
     } catch (error) {
       console.warn("No se pudo guardar el cache local.", error);
     }
-  }
-
-  function setStatus(snapshot, fromCache) {
-    if (!snapshot) {
-      els.statusBadge.textContent = "Sin conexión";
-      els.statusBadge.className = "badge badge--warning";
-      return;
-    }
-
-    if (!snapshot.isSalesOpen) {
-      els.statusBadge.textContent = "Venta cerrada";
-      els.statusBadge.className = "badge badge--warning";
-      return;
-    }
-
-    if ((snapshot.availableMeals || 0) <= 0) {
-      els.statusBadge.textContent = "Agotado";
-      els.statusBadge.className = "badge badge--warning";
-      return;
-    }
-
-    els.statusBadge.textContent = fromCache ? "Mostrando datos guardados" : "Venta abierta";
-    els.statusBadge.className = fromCache ? "badge badge--warning" : "badge badge--success";
   }
 
   function renderBuyers(orders) {
@@ -145,18 +106,14 @@
     els.buyersList.appendChild(fragment);
   }
 
-  function renderSnapshot(snapshot, fromCache) {
+  function renderSnapshot(snapshot) {
     state.snapshot = snapshot;
-    setStatus(snapshot, fromCache);
-    els.updatedAt.textContent = formatDateTime(snapshot.updatedAt);
 
     const menu = snapshot.menu || {};
     els.menuTitle.textContent = menu.title || "Menú no configurado";
     els.menuDescription.textContent = menu.description || "No hay descripción disponible.";
     els.menuPrice.textContent = formatCurrency(menu.price);
-    els.deliveryWindow.textContent = snapshot.deliveryWindow || "12:00 m. - 12:30 p. m.";
-    els.salesWindow.textContent = snapshot.salesWindow || "10:00 a. m. - 12:00 m.";
-    els.dailyMessage.textContent = snapshot.message || "La cantidad máxima es de 15 almuerzos por día.";
+    els.dailyMessage.textContent = snapshot.message || "Ofrecemos hasta 15 almuerzos diarios, según la asistencia de los niños y la disponibilidad autorizada por el MEP.";
 
     els.availableCount.textContent = String(snapshot.availableMeals || 0);
     els.soldCount.textContent = String(snapshot.soldMeals || 0);
@@ -208,11 +165,11 @@
     try {
       const snapshot = await fetchJson("/dashboard");
       saveCachedSnapshot(snapshot);
-      renderSnapshot(snapshot, false);
+      renderSnapshot(snapshot);
     } catch (error) {
       const cached = loadCachedSnapshot();
       if (cached) {
-        renderSnapshot(cached, true);
+        renderSnapshot(cached);
       }
       if (showErrors) {
         setFeedback(error.message, true);
@@ -224,11 +181,7 @@
     const formData = new FormData(els.orderForm);
     return {
       buyerName: String(formData.get("buyerName") || "").trim(),
-      buyerId: String(formData.get("buyerId") || "").trim(),
-      buyerPhone: String(formData.get("buyerPhone") || "").trim(),
-      paymentMethod: String(formData.get("paymentMethod") || "").trim(),
-      paymentReference: String(formData.get("paymentReference") || "").trim(),
-      notes: String(formData.get("notes") || "").trim()
+      paymentMethod: String(formData.get("paymentMethod") || "").trim()
     };
   }
 
@@ -247,7 +200,7 @@
     if (state.isSubmitting) return;
 
     const payload = getFormPayload();
-    if (!payload.buyerName || !payload.buyerId || !payload.buyerPhone || !payload.paymentMethod) {
+    if (!payload.buyerName || !payload.paymentMethod) {
       setFeedback("Complete todos los campos obligatorios.", true);
       return;
     }
@@ -271,7 +224,7 @@
       setFeedback(result.message || "Compra registrada correctamente.", false);
       if (result.snapshot) {
         saveCachedSnapshot(result.snapshot);
-        renderSnapshot(result.snapshot, false);
+        renderSnapshot(result.snapshot);
       } else {
         await refreshSnapshot(false);
       }
@@ -280,7 +233,7 @@
     } finally {
       state.isSubmitting = false;
       if (state.snapshot) {
-        renderSnapshot(state.snapshot, false);
+        renderSnapshot(state.snapshot);
       } else {
         els.submitButton.disabled = false;
       }
@@ -300,7 +253,7 @@
 
     const cached = loadCachedSnapshot();
     if (cached) {
-      renderSnapshot(cached, true);
+      renderSnapshot(cached);
     }
 
     els.orderForm.addEventListener("submit", submitOrder);

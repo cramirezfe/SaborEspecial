@@ -18,20 +18,6 @@
       </nav>
     </header>
 
-  <header class="hero">
-    <div class="hero__content">
-      <p class="eyebrow">Control diario de almuerzos</p>
-      <h1>Almuerzos CEEP</h1>
-      <p class="hero__text">
-        Consulta el menú, revisa cupos disponibles y registra compras sin tiquete físico.
-      </p>
-      <div class="hero__meta">
-        <span id="statusBadge" class="badge badge--muted">Cargando estado...</span>
-        <span id="updatedAt" class="muted">Sincronizando...</span>
-      </div>
-    </div>
-  </header>
-
   <main class="layout">
     <section class="card card--menu">
       <div class="section-title">
@@ -50,18 +36,10 @@
           <span class="detail-label">Precio</span>
           <strong id="menuPrice">-</strong>
         </div>
-        <div>
-          <span class="detail-label">Entrega</span>
-          <strong id="deliveryWindow">12:00 m. - 12:30 p. m.</strong>
-        </div>
-        <div>
-          <span class="detail-label">Venta</span>
-          <strong id="salesWindow">10:00 a. m. - 12:00 m.</strong>
-        </div>
       </div>
       <div class="notice">
         <p id="dailyMessage">
-          La cantidad máxima es de 15 almuerzos por día.
+          Ofrecemos hasta 15 almuerzos diarios, según la asistencia de los niños y la disponibilidad autorizada por el MEP.
         </p>
       </div>
     </section>
@@ -81,16 +59,6 @@
         </label>
 
         <label>
-          Identificación o carné
-          <input id="buyerId" name="buyerId" type="text" maxlength="40" required>
-        </label>
-
-        <label>
-          Teléfono
-          <input id="buyerPhone" name="buyerPhone" type="tel" maxlength="20" required autocomplete="tel">
-        </label>
-
-        <label>
           Método de pago
           <input id="paymentMethod" name="paymentMethod" type="hidden" required>
           <div class="payment-methods" role="radiogroup" aria-label="Metodo de pago">
@@ -101,16 +69,6 @@
               Efectivo
             </button>
           </div>
-        </label>
-
-        <label>
-          Comprobante o referencia
-          <input id="paymentReference" name="paymentReference" type="text" maxlength="120" placeholder="Ejemplo: comprobante SINPE o nota breve">
-        </label>
-
-        <label>
-          Observaciones
-          <textarea id="notes" name="notes" rows="3" maxlength="200" placeholder="Opcional"></textarea>
         </label>
 
         <button id="submitButton" type="submit" class="button">Registrar almuerzo</button>
