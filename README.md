@@ -94,6 +94,7 @@ La zona horaria operativa del sistema es `America/Costa_Rica`.
 - `POST /api/menu`
 - `GET /api/deliveries`
 - `POST /api/deliveries`
+- `POST /api/orders-export`
 
 ### Actualizar el menú sin entrar a MongoDB
 
@@ -105,6 +106,14 @@ Para que funcione:
 2. En la página, abra la sección `Actualizar menú del día`.
 3. Escriba la clave, el nombre del menú, la descripción y el precio.
 4. El sistema guardará o actualizará automáticamente el menú de la fecha actual en MongoDB.
+
+### Exportar pedidos a Excel
+
+La página de administración incluye un botón `Exportar Excel`.
+
+1. Ingrese con la clave administrativa.
+2. Haga clic en `Exportar Excel`.
+3. El sistema descargará un archivo `.csv` compatible con Excel con todos los documentos de `orders`, totalmente tabulados.
 
 ### Vista protegida de entregas
 

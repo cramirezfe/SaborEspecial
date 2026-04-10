@@ -15,6 +15,7 @@
     menuTitleInput: document.getElementById("menuTitleInput"),
     menuDescriptionInput: document.getElementById("menuDescriptionInput"),
     menuPriceInput: document.getElementById("menuPriceInput"),
+    exportOrdersButton: document.getElementById("exportOrdersButton"),
     adminUpdatedAt: document.getElementById("adminUpdatedAt"),
     currentMenuTitle: document.getElementById("currentMenuTitle"),
     currentMenuDescription: document.getElementById("currentMenuDescription"),
@@ -83,6 +84,37 @@
     }
 
     return payload;
+  }
+
+  async function downloadFile(path, body, filename) {
+    if (!config.apiBaseUrl || config.apiBaseUrl.includes("PEGUE_AQUI")) {
+      throw new Error("Debe configurar la URL del backend en config.js");
+    }
+
+    const response = await fetch(config.apiBaseUrl + path, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body || {})
+    });
+
+    if (!response.ok) {
+      const maybeJson = await response.json().catch(function () {
+        return null;
+      });
+      throw new Error((maybeJson && maybeJson.message) || "No fue posible exportar el archivo.");
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   }
 
   function unlockAdminArea(secret) {
@@ -211,9 +243,36 @@
     }
   }
 
+  async function exportOrders() {
+    if (!adminSecret) {
+      setMenuFeedback("Primero ingrese con la clave administrativa.", true);
+      return;
+    }
+
+    els.exportOrdersButton.disabled = true;
+    setMenuFeedback("Exportando pedidos...", false);
+
+    try {
+      const now = new Date();
+      const fileDate = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, "0"),
+        String(now.getDate()).padStart(2, "0")
+      ].join("-");
+
+      await downloadFile("/orders-export", { adminSecret }, `orders-${fileDate}.csv`);
+      setMenuFeedback("Archivo exportado correctamente.", false);
+    } catch (error) {
+      setMenuFeedback(error.message, true);
+    } finally {
+      els.exportOrdersButton.disabled = false;
+    }
+  }
+
   function start() {
     els.gateForm.addEventListener("submit", submitGate);
     els.menuForm.addEventListener("submit", submitMenu);
+    els.exportOrdersButton.addEventListener("click", exportOrders);
   }
 
   start();
