@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entregas | Almuerzos CEEP</title>
+  <meta name="description" content="Vista protegida para entregas y cocina.">
+  <meta name="theme-color" content="#a33d4d">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="site-shell">
+    <header class="site-header">
+      <a href="./index.html" class="site-brand">Almuerzos CEEP</a>
+      <nav class="site-nav" aria-label="Principal">
+        <a class="site-nav__link" href="./index.html">Inicio</a>
+        <a class="site-nav__link" href="./admin.html">Administración</a>
+        <a class="site-nav__link is-active" href="./deliveries.html">Entregas</a>
+      </nav>
+    </header>
+
+    <main class="admin-layout">
+      <section id="deliveriesGate" class="card admin-gate">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Acceso de entregas</p>
+            <h1>Ingrese la clave</h1>
+          </div>
+        </div>
+        <p class="admin-hero__text">
+          Esta vista muestra las compras del día para cocina y entregas. Ingrese la clave o vuelva al inicio.
+        </p>
+        <form id="deliveriesGateForm" class="form">
+          <label>
+            Clave de entregas
+            <input id="deliveriesSecret" name="deliveriesSecret" type="password" maxlength="120" required autofocus>
+          </label>
+          <div class="gate-actions">
+            <button id="deliveriesGateSubmitButton" type="submit" class="button">Ingresar</button>
+            <a class="button button--ghost" href="./index.html">Volver a inicio</a>
+          </div>
+          <p id="deliveriesGateFeedback" class="feedback" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section id="deliveriesContent" class="admin-content" hidden>
+        <section class="admin-hero">
+          <p class="eyebrow">Entregas</p>
+          <h1>Lista del día</h1>
+          <p class="admin-hero__text">
+            Revise cuántos almuerzos faltan por entregar y la lista actual de personas registradas.
+          </p>
+        </section>
+
+        <section class="card admin-card">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Resumen</p>
+              <h2 id="deliveriesMenuTitle">Cargando menú...</h2>
+            </div>
+            <span id="deliveriesUpdatedAt" class="muted">Sincronizando...</span>
+          </div>
+
+          <div class="stats">
+            <article class="stat">
+              <span>Total pedidos</span>
+              <strong id="deliveriesTotalOrders">0</strong>
+            </article>
+            <article class="stat">
+              <span>Pendientes</span>
+              <strong id="deliveriesPendingOrders">0</strong>
+            </article>
+            <article class="stat">
+              <span>Entregados</span>
+              <strong id="deliveriesDeliveredOrders">0</strong>
+            </article>
+            <article class="stat">
+              <span>Total cobrado</span>
+              <strong id="deliveriesTotalAmount">0</strong>
+            </article>
+          </div>
+
+          <div class="menu-details">
+            <div>
+              <span class="detail-label">Precio</span>
+              <strong id="deliveriesMenuPrice">-</strong>
+            </div>
+            <div>
+              <span class="detail-label">Venta</span>
+              <strong id="deliveriesSalesWindow">-</strong>
+            </div>
+            <div>
+              <span class="detail-label">Entrega</span>
+              <strong id="deliveriesDeliveryWindow">-</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="card admin-card admin-card--summary">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Cocina</p>
+              <h2>Pedidos registrados</h2>
+            </div>
+            <button id="deliveriesRefreshButton" type="button" class="button button--ghost">Actualizar</button>
+          </div>
+          <div id="deliveriesList" class="buyers-list">
+            <p class="empty-state">No hay compras registradas todavía.</p>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <template id="deliveryRowTemplate">
+    <article class="delivery-row">
+      <div class="delivery-row__main">
+        <strong class="buyer-name"></strong>
+        <p class="buyer-meta"></p>
+        <p class="delivery-status-line">
+          <span class="detail-label">Pago</span>
+          <strong class="delivery-payment-status"></strong>
+        </p>
+      </div>
+      <div class="delivery-row__aside">
+        <span class="badge buyer-payment"></span>
+        <div class="delivery-actions" role="group" aria-label="Estado de entrega">
+          <button type="button" class="delivery-action" data-delivery-status="PENDIENTE_ENTREGA">Pendiente</button>
+          <button type="button" class="delivery-action" data-delivery-status="ENTREGADO">Entregado</button>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <script src="./config.js"></script>
+  <script src="./deliveries.js" defer></script>
+</body>
+</html>

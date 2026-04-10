@@ -50,6 +50,7 @@ Si quiere usar MongoDB Atlas, mantenga el frontend en GitHub Pages y despliegue 
 - `MONGODB_URI`
 - `MONGODB_DB_NAME=ceep_lunches`
 - `ADMIN_SECRET`
+- `ORDERS_PASSWORD`
 
 ### Colecciones esperadas
 
@@ -89,6 +90,8 @@ Si quiere usar MongoDB Atlas, mantenga el frontend en GitHub Pages y despliegue 
 - `GET /api/dashboard`
 - `POST /api/orders`
 - `POST /api/menu`
+- `GET /api/deliveries`
+- `POST /api/deliveries`
 
 ### Actualizar el menú sin entrar a MongoDB
 
@@ -100,6 +103,17 @@ Para que funcione:
 2. En la página, abra la sección `Actualizar menú del día`.
 3. Escriba la clave, el nombre del menú, la descripción y el precio.
 4. El sistema guardará o actualizará automáticamente el menú de la fecha actual en MongoDB.
+
+### Vista protegida de entregas
+
+La web incluye `deliveries.html`, protegida con la variable `ORDERS_PASSWORD` en Vercel.
+
+1. Cree `ORDERS_PASSWORD` en Vercel.
+2. Entre a `Entregas` desde la navegación.
+3. Ingrese la clave.
+4. La página mostrará la lista del día para cocina y entregas.
+5. Cocina puede marcar cada pedido como `Pendiente` o `Entregado`.
+6. Cada cambio queda persistido en el pedido y además registra un evento en la colección `delivery_events`.
 
 ### Configuracion del frontend
 

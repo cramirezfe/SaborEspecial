@@ -1,11 +1,13 @@
-const CACHE_NAME = "ceep-lunch-static-v4";
+const CACHE_NAME = "ceep-lunch-static-v5";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
   "./admin.html",
+  "./deliveries.html",
   "./styles.css",
   "./app.js",
   "./admin.js",
+  "./deliveries.js",
   "./config.js",
   "./manifest.webmanifest"
 ];

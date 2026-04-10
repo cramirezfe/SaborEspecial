@@ -22,6 +22,8 @@ function normalizeOrder(order, menu, dayKey) {
     menuTitle: menu?.title || "Menu no configurado",
     menuDescription: menu?.description || "",
     menuPrice: Number(menu?.price || 1000),
+    deliveryStatus: "PENDIENTE_ENTREGA",
+    deliveredAt: null,
     recordStatus: "ACTIVO"
   };
 }
