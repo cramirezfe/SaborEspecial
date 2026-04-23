@@ -19,101 +19,174 @@
     </header>
 
     <main class="admin-layout">
-      <section id="adminContent" class="admin-content">
+
       <section class="admin-hero">
         <h1>Administración</h1>
       </section>
 
-      <section class="card admin-card">
-        <div class="section-title">
-          <div>
-            <p class="eyebrow">Formulario</p>
-            <h2>Menú de hoy</h2>
-          </div>
-          <div class="admin-actions">
-            <span id="adminUpdatedAt" class="muted">Sincronizando...</span>
-            <button id="exportOrdersButton" type="button" class="button button--ghost">Exportar Excel</button>
-          </div>
-        </div>
+      <!-- Tab Navigation -->
+      <nav class="admin-tabs" id="adminTabs" aria-label="Secciones del panel">
+        <button class="admin-tab is-active" data-tab="operationsTab" type="button">Operaciones</button>
+        <button class="admin-tab" data-tab="insightsTab" type="button">Análisis</button>
+      </nav>
 
-        <form id="menuForm" class="form">
-          <input id="adminSecret" name="adminSecret" type="hidden">
+      <!-- ================================================================
+           TAB: OPERACIONES (existing content)
+           ================================================================ -->
+      <section id="operationsTab" class="admin-content">
 
-          <label>
-            Nombre del menú
-            <input id="menuTitleInput" name="title" type="text" maxlength="120" required>
-          </label>
+        <section class="card admin-card">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Formulario</p>
+              <h2>Menú de hoy</h2>
+            </div>
+            <div class="admin-actions">
+              <span id="adminUpdatedAt" class="muted">Sincronizando...</span>
+              <button id="exportOrdersButton" type="button" class="button button--ghost">Exportar Excel</button>
+            </div>
+          </div>
 
-          <label>
-            Descripción
-            <textarea id="menuDescriptionInput" name="description" rows="4" maxlength="250" required></textarea>
-          </label>
+          <form id="menuForm" class="form">
+            <input id="adminSecret" name="adminSecret" type="hidden">
 
-          <label>
-            Precio en colones
-            <input id="menuPriceInput" name="price" type="number" min="0" step="1" required>
-          </label>
+            <label>
+              Nombre del menú
+              <input id="menuTitleInput" name="title" type="text" maxlength="120" required>
+            </label>
 
-          <button id="menuSubmitButton" type="submit" class="button">Guardar menú de hoy</button>
-          <p id="menuFeedback" class="feedback" aria-live="polite"></p>
-        </form>
-      </section>
+            <label>
+              Descripción
+              <textarea id="menuDescriptionInput" name="description" rows="4" maxlength="250" required></textarea>
+            </label>
 
-      <section class="card admin-card admin-card--summary">
-        <div class="section-title">
-          <div>
-            <p class="eyebrow">Vista actual</p>
-            <h2 id="currentMenuTitle">Cargando menú...</h2>
-          </div>
-          <div class="availability">
-            <span class="availability__label">Disponibles</span>
-            <strong id="currentAvailableMeals">0</strong>
-          </div>
-        </div>
-        <p id="currentMenuDescription" class="menu-description">Esperando datos del servidor.</p>
-        <div class="menu-details">
-          <div>
-            <span class="detail-label">Precio</span>
-            <strong id="currentMenuPrice">-</strong>
-          </div>
-          <div>
-            <span class="detail-label">Venta</span>
-            <strong id="currentSalesWindow">-</strong>
-          </div>
-          <div>
-            <span class="detail-label">Entrega</span>
-            <strong id="currentDeliveryWindow">-</strong>
-          </div>
-        </div>
-      </section>
+            <label>
+              Precio en colones
+              <input id="menuPriceInput" name="price" type="number" min="0" step="1" required>
+            </label>
 
-      <section class="card admin-card admin-orders-card">
-        <div class="section-title">
-          <div>
-            <p class="eyebrow">Pedidos del día</p>
-            <h2>Control de pagos</h2>
+            <button id="menuSubmitButton" type="submit" class="button">Guardar menú de hoy</button>
+            <p id="menuFeedback" class="feedback" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section class="card admin-card admin-card--summary">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Vista actual</p>
+              <h2 id="currentMenuTitle">Cargando menú...</h2>
+            </div>
+            <div class="availability">
+              <span class="availability__label">Disponibles</span>
+              <strong id="currentAvailableMeals">0</strong>
+            </div>
           </div>
-          <div class="admin-orders-summary">
-            <span>Total: <strong id="adminOrdersTotal">0</strong></span>
-            <span>Pagados: <strong id="adminOrdersPaid">0</strong></span>
-            <span>Pendientes: <strong id="adminOrdersPending">0</strong></span>
+          <p id="currentMenuDescription" class="menu-description">Esperando datos del servidor.</p>
+          <div class="menu-details">
+            <div>
+              <span class="detail-label">Precio</span>
+              <strong id="currentMenuPrice">-</strong>
+            </div>
+            <div>
+              <span class="detail-label">Venta</span>
+              <strong id="currentSalesWindow">-</strong>
+            </div>
+            <div>
+              <span class="detail-label">Entrega</span>
+              <strong id="currentDeliveryWindow">-</strong>
+            </div>
           </div>
-        </div>
-        <div class="admin-orders-table">
-          <div class="admin-orders-table__head">
-            <span>Cliente</span>
-            <span>Solicitud</span>
-            <span>Método</span>
-            <span>Estado del pago</span>
-            <span>Confirmado</span>
-            <span>Acciones</span>
+        </section>
+
+        <section class="card admin-card admin-orders-card">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Pedidos del día</p>
+              <h2>Control de pagos</h2>
+            </div>
+            <div class="admin-orders-summary">
+              <span>Total: <strong id="adminOrdersTotal">0</strong></span>
+              <span>Pagados: <strong id="adminOrdersPaid">0</strong></span>
+              <span>Pendientes: <strong id="adminOrdersPending">0</strong></span>
+            </div>
           </div>
-          <div id="adminOrdersList" class="admin-orders-table__body">
-            <div class="admin-orders-table__empty">No hay pedidos registrados hoy.</div>
+          <div class="admin-orders-table">
+            <div class="admin-orders-table__head">
+              <span>Cliente</span>
+              <span>Solicitud</span>
+              <span>Método</span>
+              <span>Estado del pago</span>
+              <span>Confirmado</span>
+              <span>Acciones</span>
+            </div>
+            <div id="adminOrdersList" class="admin-orders-table__body">
+              <div class="admin-orders-table__empty">No hay pedidos registrados hoy.</div>
+            </div>
           </div>
-        </div>
-      </section>
-      </section>
+        </section>
+
+      </section><!-- /operationsTab -->
+
+      <!-- ================================================================
+           TAB: ANÁLISIS (new Insights content)
+           ================================================================ -->
+      <section id="insightsTab" class="admin-content" hidden>
+
+        <!-- 1. PREP LIST — most prominent, full-width -->
+        <section class="card admin-card insights-full-width">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Producción del día</p>
+              <h2>Lista de Preparación</h2>
+            </div>
+            <span id="insightsUpdatedAt" class="muted">Cargando...</span>
+          </div>
+          <div id="prepListContent">
+            <p class="insights-empty">Cargando datos de producción...</p>
+          </div>
+        </section>
+
+        <!-- 2. DEMAND FORECAST -->
+        <section class="card admin-card">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Predicción histórica</p>
+              <h2>Demanda del día</h2>
+            </div>
+          </div>
+          <div id="forecastContent">
+            <p class="insights-empty">Cargando predicción...</p>
+          </div>
+        </section>
+
+        <!-- 3. PEAK HOUR HEATMAP -->
+        <section class="card admin-card">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Últimas 4 semanas</p>
+              <h2>Picos de demanda</h2>
+            </div>
+          </div>
+          <div id="heatmapContent">
+            <p class="insights-empty">Cargando heatmap...</p>
+          </div>
+        </section>
+
+        <!-- 4. WEEKLY FINANCIAL SUMMARY — full-width -->
+        <section class="card admin-card insights-full-width">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Historial financiero</p>
+              <h2>Resumen Semanal</h2>
+            </div>
+          </div>
+          <div id="weeklyContent">
+            <p class="insights-empty">Cargando resumen financiero...</p>
+          </div>
+        </section>
+
+      </section><!-- /insightsTab -->
+
     </main>
 
     <footer class="site-footer">
