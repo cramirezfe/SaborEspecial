@@ -57,9 +57,9 @@
             <div class="delivery-table__head">
               <span>PEDIDO</span>
               <span>SOLICITUD</span>
-              <span>ESTADO DEL PAGO</span>
-              <span>PENDIENTE</span>
-              <span>ENTREGADO</span>
+              <span>PAGO</span>
+              <span>ESTADO ENTREGA</span>
+              <span>ACCIÓN</span>
             </div>
             <div id="deliveriesList" class="delivery-table__body">
               <div class="delivery-table__empty">No hay compras registradas todavía.</div>
@@ -76,7 +76,7 @@
 
   <template id="deliveryRowTemplate">
     <article class="delivery-table__row">
-      <div class="delivery-table__cell">
+      <div class="delivery-table__cell delivery-table__cell--start">
         <strong class="buyer-name delivery-name-card"></strong>
         <p class="delivery-order-meta"></p>
       </div>
@@ -89,16 +89,19 @@
         <p class="delivery-status-time delivery-payment-confirmed-at"></p>
       </div>
       <div class="delivery-table__cell">
-        <button type="button" class="delivery-action" data-delivery-status="PENDIENTE_ENTREGA">Pendiente</button>
+        <!-- JS populates: current delivery status pill -->
+        <span class="delivery-order-status-pill delivery-workflow-status"></span>
+        <p class="delivery-status-time delivery-delivered-at"></p>
       </div>
-      <div class="delivery-table__cell">
-        <button type="button" class="delivery-action" data-delivery-status="ENTREGADO">Entregado</button>
-        <p class="delivery-status-time delivery-delivered-at">-</p>
+      <div class="delivery-table__cell delivery-workflow-actions">
+        <!-- JS populates: next-step action button -->
       </div>
     </article>
   </template>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="./config.js"></script>
+  <script src="./supabase-client.js"></script>
   <script src="./deliveries.js" defer></script>
 </body>
 </html>
