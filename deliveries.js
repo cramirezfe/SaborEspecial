@@ -5,10 +5,13 @@
   var banner  = window.SE.banner;
   var fmt     = window.SE.fmt;
 
-  var CACHE_KEY = "ceep-deliveries-cache-v1";
-  var accessToken      = "";
-  var realtimeChannel  = null;
-  var api; // created after session is available
+  var CACHE_KEY       = "ceep-deliveries-cache-v1";
+  var accessToken     = "";
+  var realtimeChannel = null;
+  var api;
+
+  // "today" or "tomorrow" — controls which target_date the kitchen sees.
+  var selectedDateMode = "today";
 
   var els = {
     updatedAt:          document.getElementById("deliveriesUpdatedAt"),
@@ -19,8 +22,23 @@
     deliveredOrders:    document.getElementById("deliveriesDeliveredOrders"),
     ordersList:         document.getElementById("deliveriesList"),
     rowTemplate:        document.getElementById("deliveryRowTemplate"),
-    logoutButton:       document.getElementById("deliveriesLogoutButton")
+    logoutButton:       document.getElementById("deliveriesLogoutButton"),
+    todayBtn:           document.getElementById("deliveriesTodayBtn"),
+    tomorrowBtn:        document.getElementById("deliveriesTomorrowBtn")
   };
+
+  // ── Date helpers (mirrors getDayKey in lib/dashboard.js) ──────────
+
+  function crDateKey(offsetDays) {
+    offsetDays = offsetDays || 0;
+    return new Date(Date.now() - 6 * 60 * 60 * 1000 + offsetDays * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+  }
+
+  function getTargetDate() {
+    return crDateKey(selectedDateMode === "tomorrow" ? 1 : 0);
+  }
 
   // ── Cache ─────────────────────────────────────────────────────────
 
@@ -49,7 +67,6 @@
     ENTREGADO:          "Entregado"
   };
 
-  // Workflow: each status maps to the next step to show as a button.
   var NEXT_STEP = {
     PENDIENTE_ENTREGA:  { status: "EN_PREPARACION",     label: "→ En Preparación" },
     EN_PREPARACION:     { status: "LISTO_PARA_ENTREGA", label: "→ Listo para Entrega" },
@@ -65,7 +82,6 @@
     if (!actionsCell) return;
     actionsCell.innerHTML = "";
 
-    // SINPE orders waiting for manual verification get a dedicated confirm button.
     if (order.needsSinpeVerification) {
       var sinpeBtn = document.createElement("button");
       sinpeBtn.type      = "button";
@@ -93,7 +109,8 @@
   function renderOrders(orders) {
     els.ordersList.innerHTML = "";
     if (!orders || !orders.length) {
-      els.ordersList.innerHTML = '<div class="delivery-table__empty">No hay compras registradas todavía.</div>';
+      var label = selectedDateMode === "tomorrow" ? "mañana" : "hoy";
+      els.ordersList.innerHTML = '<div class="delivery-table__empty">No hay compras registradas para ' + label + '.</div>';
       return;
     }
 
@@ -101,7 +118,6 @@
     orders.forEach(function (order) {
       var node = els.rowTemplate.content.cloneNode(true);
 
-      // Highlight rows where a SINPE transfer is waiting for manual confirmation.
       if (order.needsSinpeVerification) {
         var row = node.querySelector(".delivery-table__row");
         if (row) row.classList.add("is-sinpe-pending");
@@ -138,8 +154,9 @@
   // ── Network ───────────────────────────────────────────────────────
 
   async function refreshSnapshot() {
+    var targetDate = getTargetDate();
     try {
-      var snapshot = await api.fetchJson("/deliveries");
+      var snapshot = await api.fetchJson("/deliveries?date=" + encodeURIComponent(targetDate));
       saveCache(snapshot);
       renderSnapshot(snapshot);
       setFeedback("", false);
@@ -182,9 +199,18 @@
     }
   }
 
-  // ── Realtime (Priority 6) ─────────────────────────────────────────
-  // Subscribes to all order changes for this cafeteria.
-  // Receives cafeteriaId from the auth-role response.
+  // ── Date toggle ───────────────────────────────────────────────────
+
+  function setDateMode(mode) {
+    selectedDateMode = mode;
+
+    if (els.todayBtn)    els.todayBtn.classList.toggle("is-active",    mode === "today");
+    if (els.tomorrowBtn) els.tomorrowBtn.classList.toggle("is-active", mode === "tomorrow");
+
+    refreshSnapshot();
+  }
+
+  // ── Realtime ──────────────────────────────────────────────────────
 
   function subscribeRealtime(cid) {
     var cfg = window.APP_CONFIG || {};
@@ -192,7 +218,6 @@
         !cfg.supabaseAnonKey || cfg.supabaseAnonKey.includes("REPLACE_WITH")) {
       return;
     }
-
     if (realtimeChannel) window.supabaseClient.removeChannel(realtimeChannel);
 
     realtimeChannel = window.supabaseClient
@@ -202,9 +227,7 @@
         schema: "public",
         table:  "orders",
         filter: "cafeteria_id=eq." + cid
-      }, function () {
-        refreshSnapshot();
-      })
+      }, function () { refreshSnapshot(); })
       .subscribe();
   }
 
@@ -213,7 +236,6 @@
   async function start() {
     banner.init();
 
-    // 1. Require valid session.
     var { data: { session } } = await window.supabaseClient.auth.getSession();
     if (!session) { window.location.replace("./index.html"); return; }
     accessToken = session.access_token;
@@ -225,7 +247,6 @@
 
     api = window.SE.api.make(function () { return accessToken; });
 
-    // 2. Get cafeteriaId for the Realtime filter.
     var roleData;
     try {
       roleData = await api.fetchJson("/auth-role");
@@ -241,16 +262,15 @@
       });
     }
 
-    // 3. Show cached data immediately while the network call is in-flight.
+    // Wire up date toggle buttons
+    if (els.todayBtn)    els.todayBtn.addEventListener("click",    function () { setDateMode("today"); });
+    if (els.tomorrowBtn) els.tomorrowBtn.addEventListener("click", function () { setDateMode("tomorrow"); });
+
     var cached = loadCached();
     if (cached) renderSnapshot(cached);
 
     await refreshSnapshot();
-
-    // 4. Realtime — instant push updates.
     subscribeRealtime(roleData.cafeteriaId);
-
-    // 5. 60 s fallback for environments where WebSockets are blocked.
     window.setInterval(refreshSnapshot, 60000);
   }
 

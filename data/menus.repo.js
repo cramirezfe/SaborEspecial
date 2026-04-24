@@ -1,6 +1,6 @@
 import { supabase } from "../lib/supabase.js";
 
-// Returns the active menu for today, or null if none exists.
+// Returns the active menu for a specific day, or null if none exists.
 export async function findActive(cafeteriaId, dayKey) {
   const { data, error } = await supabase
     .from("menus")
@@ -14,7 +14,8 @@ export async function findActive(cafeteriaId, dayKey) {
   return data;
 }
 
-// Creates or replaces today's menu. Uses the unique (cafeteria_id, day_key) constraint.
+// Creates or replaces the menu for a specific day.
+// Uses the unique (cafeteria_id, day_key) constraint for idempotent upserts.
 export async function upsert(cafeteriaId, dayKey, { title, description, price }) {
   const { data, error } = await supabase
     .from("menus")
@@ -34,4 +35,20 @@ export async function upsert(cafeteriaId, dayKey, { title, description, price })
 
   if (error) throw error;
   return data;
+}
+
+// Returns all active menus for a cafeteria between fromDate and toDate (inclusive).
+// Used to build the weekly planning grid for both management and customer views.
+export async function findWeek(cafeteriaId, fromDate, toDate) {
+  const { data, error } = await supabase
+    .from("menus")
+    .select("id, day_key, title, description, price")
+    .eq("cafeteria_id", cafeteriaId)
+    .eq("active", true)
+    .gte("day_key", fromDate)
+    .lte("day_key", toDate)
+    .order("day_key", { ascending: true });
+
+  if (error) throw error;
+  return data || [];
 }

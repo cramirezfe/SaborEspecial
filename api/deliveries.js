@@ -9,7 +9,6 @@ import {
 } from "../data/orders.repo.js";
 import { getDeliveryWindowConfig }                           from "../data/settings.repo.js";
 
-// All four stages used by the kitchen workflow.
 const VALID_DELIVERY_STATUSES = [
   "PENDIENTE_ENTREGA",
   "EN_PREPARACION",
@@ -37,25 +36,26 @@ function normalizePayment(status) {
   return "PENDIENTE DE PAGO";
 }
 
-async function buildSnapshot(cafeteriaId, dayKey) {
+async function buildSnapshot(cafeteriaId, targetDate) {
   const [s, menu, orders, stats] = await Promise.all([
     getDeliveryWindowConfig(cafeteriaId),
-    findActiveMenu(cafeteriaId, dayKey),
-    findToday(cafeteriaId, dayKey),
-    getStats(cafeteriaId, dayKey)
+    findActiveMenu(cafeteriaId, targetDate),
+    findToday(cafeteriaId, targetDate),
+    getStats(cafeteriaId, targetDate)
   ]);
 
   return {
-    ok:                   true,
-    updatedAt:            new Date().toISOString(),
-    totalOrders:          stats.totalOrders,
-    paidOrders:           stats.paidOrders,
-    pendingPaymentCount:  stats.pendingPayment,
-    deliveredOrders:      stats.deliveredOrders,
-    pendingDeliveries:    stats.pendingDeliveries,
+    ok:                       true,
+    updatedAt:                new Date().toISOString(),
+    targetDate,
+    totalOrders:              stats.totalOrders,
+    paidOrders:               stats.paidOrders,
+    pendingPaymentCount:      stats.pendingPayment,
+    deliveredOrders:          stats.deliveredOrders,
+    pendingDeliveries:        stats.pendingDeliveries,
     paidPendingDeliveryCount: stats.paidPendingDelivery,
-    salesWindow:          `${s.sales_start || "10:00"} - ${s.sales_end || "12:00"}`,
-    deliveryWindow:       s.delivery_window || "12:00 - 12:30",
+    salesWindow:              `${s.sales_start || "10:00"} - ${s.sales_end || "12:00"}`,
+    deliveryWindow:           s.delivery_window || "12:00 - 12:30",
     menu: {
       title:       menu?.title       || "Menu no configurado",
       description: menu?.description || "",
@@ -72,7 +72,6 @@ async function buildSnapshot(cafeteriaId, dayKey) {
       createdAtLabel:          formatTimestamp(o.created_at),
       paymentConfirmedAtLabel: o.payment_confirmed_at ? formatTimestamp(o.payment_confirmed_at) : "",
       deliveredAtLabel:        o.delivered_at         ? formatTimestamp(o.delivered_at)          : "",
-      // Signals the kitchen UI to surface the manual SINPE verification button.
       needsSinpeVerification:  o.payment_method === "SINPE" &&
         !["PAGADO", "CONFIRMADO", "CONFIRMADO_SINPE"].includes(String(o.payment_status || "").toUpperCase())
     }))
@@ -86,7 +85,10 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     try {
       const { cafeteriaId } = await requireAuth(req, ["ADMIN", "HELPER", "ORDERS"]);
-      return res.status(200).json(await buildSnapshot(cafeteriaId, getDayKey()));
+      // ?date=YYYY-MM-DD toggles the kitchen view between today and any target date.
+      const rawDate    = String(req.query?.date || "").trim();
+      const targetDate = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : getDayKey();
+      return res.status(200).json(await buildSnapshot(cafeteriaId, targetDate));
     } catch (err) {
       if (err.status) return res.status(err.status).json({ ok: false, message: err.message });
       return res.status(500).json({ ok: false, message: err.message || "Unexpected server error." });
@@ -96,7 +98,6 @@ export default async function handler(req, res) {
   if (req.method === "POST") {
     try {
       const { cafeteriaId, userId } = await requireAuth(req, ["ADMIN", "HELPER", "ORDERS"]);
-      const dayKey         = getDayKey();
       const orderId        = String(req.body?.orderId        || "");
       const deliveryStatus = req.body?.deliveryStatus ? String(req.body.deliveryStatus) : null;
       const paymentStatus  = req.body?.paymentStatus  ? String(req.body.paymentStatus)  : null;
@@ -108,14 +109,18 @@ export default async function handler(req, res) {
         return res.status(400).json({ ok: false, message: "Debe especificar deliveryStatus o paymentStatus." });
       }
 
-      // Verify ownership and get buyer contact for email.
-      const order = await findById(orderId, cafeteriaId, dayKey);
+      // findById is no longer restricted to a specific day — the order may have
+      // been placed on a different day than the one being served.
+      const order = await findById(orderId, cafeteriaId);
       if (!order) {
         return res.status(404).json({ ok: false, message: "Pedido no encontrado." });
       }
 
-      let emailStatus = null;
+      // Return the snapshot for the order's own target_date so the kitchen
+      // view stays consistent with whatever date filter is in use.
+      const targetDate = order.target_date || getDayKey();
 
+      let emailStatus = null;
       const appBaseUrl  = (process.env.APP_BASE_URL || "").replace(/\/$/, "");
       const trackingUrl = appBaseUrl && order.tracking_token
         ? `${appBaseUrl}/track.html?token=${order.tracking_token}`
@@ -126,9 +131,8 @@ export default async function handler(req, res) {
           return res.status(400).json({ ok: false, message: "Estado de entrega inválido." });
         }
         await updateDelivery(orderId, cafeteriaId, deliveryStatus);
-        await logDeliveryEvent(cafeteriaId, orderId, dayKey, deliveryStatus);
+        await logDeliveryEvent(cafeteriaId, orderId, targetDate, deliveryStatus);
 
-        // Notify buyer at each visible kitchen milestone, not just on final delivery.
         const NOTIFY_STATUSES = ["EN_PREPARACION", "LISTO_PARA_ENTREGA", "ENTREGADO"];
         if (NOTIFY_STATUSES.includes(deliveryStatus) && order.buyer_email) {
           emailStatus = await sendOrderStatusEmail({
@@ -145,7 +149,6 @@ export default async function handler(req, res) {
         if (!PAID_STATUSES.includes(paymentStatus)) {
           return res.status(400).json({ ok: false, message: "Estado de pago inválido." });
         }
-        // userId is stored for accounting: which staff member verified the SINPE transfer.
         await updatePayment(orderId, cafeteriaId, paymentStatus, userId);
 
         const isConfirming = ["PAGADO", "CONFIRMADO", "CONFIRMADO_SINPE"].includes(paymentStatus);
@@ -160,7 +163,7 @@ export default async function handler(req, res) {
         }
       }
 
-      const snapshot = await buildSnapshot(cafeteriaId, dayKey);
+      const snapshot = await buildSnapshot(cafeteriaId, targetDate);
       if (emailStatus && !emailStatus.sent) {
         snapshot.emailWarning = "La actualización fue guardada, pero no se pudo enviar el correo al comprador.";
       }

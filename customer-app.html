@@ -20,10 +20,21 @@
     </header>
 
   <main class="layout">
+
+    <!-- ── Day selector ──────────────────────────────────────────── -->
+    <section class="card card--week-nav">
+      <p class="eyebrow">¿Para qué día?</p>
+      <div id="weekDayTabs" class="week-tabs" role="tablist" aria-label="Seleccionar día">
+        <!-- Populated by app.js -->
+        <span class="week-tab week-tab--loading">Cargando...</span>
+      </div>
+    </section>
+
+    <!-- ── Menu of the selected day ──────────────────────────────── -->
     <section class="card card--menu">
       <div class="section-title">
         <div>
-          <p class="eyebrow">Menú del día</p>
+          <p class="eyebrow" id="menuDayEyebrow">Menú del día</p>
           <h2 id="menuTitle">Cargando menú...</h2>
         </div>
         <div class="availability">
