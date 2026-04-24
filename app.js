@@ -4,29 +4,43 @@
   var config  = window.APP_CONFIG || {};
   var banner  = window.SE.banner;
   var fmt     = window.SE.fmt;
-  // Public endpoints don't send a Bearer token.
   var api     = window.SE.api.make(null);
 
-  var slug    = String(config.cafeteriaSlug || "ceep");
-  var state   = { snapshot: null, isSubmitting: false };
+  var slug = String(config.cafeteriaSlug || "ceep");
+
+  // State
+  var state = {
+    snapshot:      null,
+    weekMenus:     [],
+    selectedDate:  "",   // YYYY-MM-DD the buyer has selected
+    isSubmitting:  false
+  };
 
   var els = {
-    menuTitle:         document.getElementById("menuTitle"),
-    menuDescription:   document.getElementById("menuDescription"),
-    menuPrice:         document.getElementById("menuPrice"),
-    dailyMessage:      document.getElementById("dailyMessage"),
-    availableCount:    document.getElementById("availableCount"),
-    buyersList:        document.getElementById("buyersList"),
-    orderForm:         document.getElementById("orderForm"),
-    submitButton:      document.getElementById("submitButton"),
-    formFeedback:      document.getElementById("formFeedback"),
-    paymentMethodInput:document.getElementById("paymentMethod"),
-    paymentOptions:    Array.from(document.querySelectorAll(".payment-option")),
-    buyerRowTemplate:  document.getElementById("buyerRowTemplate"),
-    logoutButton:      document.getElementById("logoutButton"),
+    weekDayTabs:        document.getElementById("weekDayTabs"),
+    menuDayEyebrow:     document.getElementById("menuDayEyebrow"),
+    menuTitle:          document.getElementById("menuTitle"),
+    menuDescription:    document.getElementById("menuDescription"),
+    menuPrice:          document.getElementById("menuPrice"),
+    dailyMessage:       document.getElementById("dailyMessage"),
+    availableCount:     document.getElementById("availableCount"),
+    buyersList:         document.getElementById("buyersList"),
+    orderForm:          document.getElementById("orderForm"),
+    submitButton:       document.getElementById("submitButton"),
+    formFeedback:       document.getElementById("formFeedback"),
+    paymentMethodInput: document.getElementById("paymentMethod"),
+    paymentOptions:     Array.from(document.querySelectorAll(".payment-option")),
+    buyerRowTemplate:   document.getElementById("buyerRowTemplate"),
+    logoutButton:       document.getElementById("logoutButton"),
     trackingLinkSection:document.getElementById("trackingLinkSection"),
-    trackingLink:      document.getElementById("trackingLink")
+    trackingLink:       document.getElementById("trackingLink")
   };
+
+  // ── Day key utilities (mirrors lib/dashboard.js) ──────────────────
+
+  function todayKey() {
+    return new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  }
 
   // ── Cache helpers ─────────────────────────────────────────────────
 
@@ -47,7 +61,107 @@
     els.formFeedback.style.color = isError ? "#842f3d" : "#705d52";
   }
 
-  // ── Render ────────────────────────────────────────────────────────
+  // ── Week day tabs ─────────────────────────────────────────────────
+
+  function renderWeekTabs(weekMenus) {
+    state.weekMenus = weekMenus || [];
+    if (!els.weekDayTabs) return;
+    if (!state.weekMenus.length) {
+      els.weekDayTabs.innerHTML = '<span class="week-tab week-tab--loading">Sin datos</span>';
+      return;
+    }
+
+    var html = "";
+    state.weekMenus.forEach(function (day) {
+      var isSelected   = day.date === state.selectedDate;
+      var hasMenu      = Boolean(day.menu);
+      var isOpen       = day.isOrderingOpen;
+      var tabClass     = "week-tab" +
+        (isSelected ? " is-active"  : "") +
+        (!hasMenu   ? " is-no-menu" : "") +
+        (!isOpen && hasMenu ? " is-closed" : "");
+
+      html +=
+        '<button type="button" class="' + tabClass + '" ' +
+          'data-date="' + day.date + '" ' +
+          'aria-selected="' + (isSelected ? "true" : "false") + '" ' +
+          'role="tab" ' +
+          (!hasMenu ? 'aria-disabled="true" ' : '') + '>' +
+          '<span class="week-tab__day">' + day.dayLabel + (day.isToday ? ' <em>(hoy)</em>' : '') + '</span>' +
+          '<span class="week-tab__status">' + (hasMenu ? (isOpen ? String(day.availableMeals) + ' disp.' : 'Cerrado') : 'No disponible') + '</span>' +
+        '</button>';
+    });
+    els.weekDayTabs.innerHTML = html;
+
+    els.weekDayTabs.querySelectorAll(".week-tab").forEach(function (btn) {
+      if (btn.getAttribute("aria-disabled") === "true") return;
+      btn.addEventListener("click", function () {
+        selectDate(btn.dataset.date);
+      });
+    });
+  }
+
+  function selectDate(date) {
+    state.selectedDate = date;
+
+    // Refresh active state in the tab bar
+    if (els.weekDayTabs) {
+      els.weekDayTabs.querySelectorAll(".week-tab").forEach(function (btn) {
+        var isActive = btn.dataset.date === date;
+        btn.classList.toggle("is-active", isActive);
+        btn.setAttribute("aria-selected", isActive ? "true" : "false");
+      });
+    }
+
+    // Find the day's data and render the menu card
+    var day = state.weekMenus.find(function (d) { return d.date === date; });
+    renderDayMenu(day);
+  }
+
+  function renderDayMenu(day) {
+    if (!day) return;
+
+    var menu = day.menu || null;
+
+    // Eyebrow label: "Menú de hoy" vs "Menú del Mar 28 abr"
+    if (els.menuDayEyebrow) {
+      els.menuDayEyebrow.textContent = day.isToday
+        ? "Menú de hoy"
+        : "Menú del " + day.dayLabel;
+    }
+
+    if (menu) {
+      els.menuTitle.textContent       = menu.title;
+      els.menuDescription.textContent = menu.description || "No hay descripción disponible.";
+      els.menuPrice.textContent       = fmt.currency(menu.price);
+    } else {
+      els.menuTitle.textContent       = "No disponible";
+      els.menuDescription.textContent = "No hay menú programado para este día.";
+      els.menuPrice.textContent       = "-";
+    }
+
+    els.availableCount.textContent = String(day.availableMeals || 0);
+
+    var canBuy = day.isOrderingOpen && !state.isSubmitting;
+    els.submitButton.disabled = !canBuy;
+
+    if (!canBuy) {
+      if (!menu) {
+        setFeedback("No hay menú disponible para este día.", false);
+      } else if (!day.isOrderingOpen) {
+        setFeedback("La venta está cerrada o ya se alcanzó el máximo para este día.", false);
+      }
+    } else if (!state.isSubmitting) {
+      setFeedback("", false);
+    }
+
+    // Show orders list for the selected date from the current snapshot
+    if (state.snapshot) {
+      renderBuyers(state.snapshot.orders || []);
+    }
+  }
+
+  // ── Render buyers list ────────────────────────────────────────────
 
   function renderBuyers(orders) {
     els.buyersList.innerHTML = "";
@@ -58,13 +172,13 @@
 
     var fragment = document.createDocumentFragment();
     orders.forEach(function (order) {
-      var node       = els.buyerRowTemplate.content.cloneNode(true);
-      var payLabel   = fmt.paymentLabel(order.paymentStatus);
+      var node     = els.buyerRowTemplate.content.cloneNode(true);
+      var payLabel = fmt.paymentLabel(order.paymentStatus);
 
-      node.querySelector(".buyer-name").textContent           = order.buyerName;
-      node.querySelector(".buyer-meta").textContent           = [order.paymentMethod, payLabel, order.timestampLabel].filter(Boolean).join(" | ");
-      node.querySelector(".customer-order-status").textContent= order.orderStatus || "SOLICITADO";
-      node.querySelector(".customer-created-at").textContent  = order.createdAtLabel || order.timestampLabel || "";
+      node.querySelector(".buyer-name").textContent            = order.buyerName;
+      node.querySelector(".buyer-meta").textContent            = [order.paymentMethod, payLabel, order.timestampLabel].filter(Boolean).join(" | ");
+      node.querySelector(".customer-order-status").textContent = order.orderStatus || "SOLICITADO";
+      node.querySelector(".customer-created-at").textContent   = order.createdAtLabel || order.timestampLabel || "";
 
       var payNode = node.querySelector(".customer-payment-status");
       payNode.textContent = payLabel;
@@ -72,10 +186,15 @@
 
       node.querySelector(".customer-payment-confirmed-at").textContent = order.paymentConfirmedAtLabel || "";
 
-      var delivery = order.deliveryStatus || "PENDIENTE_ENTREGA";
-      var isDone   = delivery === "ENTREGADO" || delivery === "LISTO_PARA_ENTREGA";
+      var delivery  = order.deliveryStatus || "PENDIENTE_ENTREGA";
+      var isDone    = delivery === "ENTREGADO" || delivery === "LISTO_PARA_ENTREGA";
       var badgeNode = node.querySelector(".customer-delivery-badge");
-      var LABELS    = { ENTREGADO: "Entregado", LISTO_PARA_ENTREGA: "Listo para Entrega", EN_PREPARACION: "En Preparación", PENDIENTE_ENTREGA: "Solicitado" };
+      var LABELS    = {
+        ENTREGADO:          "Entregado",
+        LISTO_PARA_ENTREGA: "Listo para Entrega",
+        EN_PREPARACION:     "En Preparación",
+        PENDIENTE_ENTREGA:  "Solicitado"
+      };
       badgeNode.textContent = LABELS[delivery] || "Solicitado";
       badgeNode.className   = (isDone ? "delivery-action is-selected" : "delivery-action") + " customer-delivery-badge";
 
@@ -87,18 +206,37 @@
 
   function renderSnapshot(snapshot) {
     state.snapshot = snapshot;
-    var menu = snapshot.menu || {};
-    els.menuTitle.textContent       = menu.title       || "Menú no configurado";
-    els.menuDescription.textContent = menu.description || "No hay descripción disponible.";
-    els.menuPrice.textContent       = fmt.currency(menu.price);
-    els.dailyMessage.textContent    = snapshot.message || "";
-    els.availableCount.textContent  = String(snapshot.availableMeals || 0);
-    renderBuyers(snapshot.orders || []);
+    if (els.dailyMessage) els.dailyMessage.textContent = snapshot.message || "";
 
-    var canBuy = Boolean(snapshot.isSalesOpen) && Number(snapshot.availableMeals || 0) > 0;
-    els.submitButton.disabled = !canBuy || state.isSubmitting;
-    if (!canBuy) setFeedback("La venta está cerrada o ya se alcanzó el máximo diario.", false);
-    else if (!state.isSubmitting) setFeedback("", false);
+    // Rebuild week tabs if weekly data is present
+    if (snapshot.weekMenus && snapshot.weekMenus.length) {
+      renderWeekTabs(snapshot.weekMenus);
+
+      // On first load auto-select today (or first available day)
+      if (!state.selectedDate) {
+        var today = todayKey();
+        var firstOpen = snapshot.weekMenus.find(function (d) { return d.isOrderingOpen; });
+        var todayEntry = snapshot.weekMenus.find(function (d) { return d.date === today; });
+        selectDate((todayEntry || firstOpen || snapshot.weekMenus[0]).date);
+      } else {
+        // Re-render the current day's card in case availability changed
+        var current = snapshot.weekMenus.find(function (d) { return d.date === state.selectedDate; });
+        if (current) renderDayMenu(current);
+      }
+    } else {
+      // Fallback: single-day mode (no weekMenus in response)
+      var menu = snapshot.menu || {};
+      els.menuTitle.textContent       = menu.title       || "Menú no configurado";
+      els.menuDescription.textContent = menu.description || "No hay descripción disponible.";
+      els.menuPrice.textContent       = fmt.currency(menu.price);
+      els.availableCount.textContent  = String(snapshot.availableMeals || 0);
+      renderBuyers(snapshot.orders || []);
+
+      var canBuy = Boolean(snapshot.isSalesOpen) && Number(snapshot.availableMeals || 0) > 0;
+      els.submitButton.disabled = !canBuy || state.isSubmitting;
+      if (!canBuy) setFeedback("La venta está cerrada o ya se alcanzó el máximo diario.", false);
+      else if (!state.isSubmitting) setFeedback("", false);
+    }
   }
 
   function showTrackingLink(trackingUrl) {
@@ -108,7 +246,7 @@
     els.trackingLinkSection.hidden = false;
   }
 
-  // ── Optimistic UI helpers ─────────────────────────────────────────
+  // ── Optimistic UI ─────────────────────────────────────────────────
 
   function addOptimisticOrder(buyerName, paymentMethod) {
     var empty = els.buyersList.querySelector(".delivery-table__empty");
@@ -116,7 +254,7 @@
 
     var fragment = els.buyerRowTemplate.content.cloneNode(true);
     var row = fragment.firstElementChild;
-    row.dataset.optimistic = "true";
+    if (row) row.dataset.optimistic = "true";
 
     fragment.querySelector(".buyer-name").textContent = buyerName;
     fragment.querySelector(".buyer-meta").textContent = [paymentMethod, "PENDIENTE DE PAGO", "Ahora"].join(" | ");
@@ -142,7 +280,7 @@
 
   async function refreshSnapshot(showErrors) {
     try {
-      var snapshot = await api.fetchJson("/dashboard?slug=" + encodeURIComponent(slug));
+      var snapshot = await api.fetchJson("/dashboard?slug=" + encodeURIComponent(slug) + "&week=true");
       saveCache(snapshot);
       renderSnapshot(snapshot);
       banner.setSynced();
@@ -163,9 +301,10 @@
 
     var fd      = new FormData(els.orderForm);
     var payload = {
-      buyerName:     String(fd.get("buyerName")     || "").trim(),
-      buyerEmail:    String(fd.get("buyerEmail")     || "").trim().toLowerCase(),
-      paymentMethod: String(fd.get("paymentMethod")  || "").trim()
+      buyerName:     String(fd.get("buyerName")    || "").trim(),
+      buyerEmail:    String(fd.get("buyerEmail")   || "").trim().toLowerCase(),
+      paymentMethod: String(fd.get("paymentMethod") || "").trim(),
+      targetDate:    state.selectedDate || todayKey()
     };
 
     if (!payload.buyerName || !payload.paymentMethod) {
@@ -177,7 +316,6 @@
     els.submitButton.disabled = true;
     banner.setSyncing();
 
-    // Optimistic UI: give instant feedback before the server responds.
     var prevAvailable = Number(els.availableCount.textContent) || 0;
     els.orderForm.reset();
     selectPaymentMethod("");
@@ -200,26 +338,20 @@
         showTrackingLink(trackingUrl);
       }
 
-      // Replace optimistic row with confirmed server data.
-      if (result.snapshot) { saveCache(result.snapshot); renderSnapshot(result.snapshot); }
-      else                 { await refreshSnapshot(false); }
+      // Refresh to get the updated week view including the new order
+      await refreshSnapshot(false);
       setFeedback(result.message || "Compra registrada correctamente.", false);
       banner.setSynced();
     } catch (err) {
-      // Rollback: undo optimistic changes and surface the error.
       removeOptimisticOrders();
       els.availableCount.textContent = String(prevAvailable);
       setFeedback(err.message, true);
       banner.setError(null);
     } finally {
       state.isSubmitting = false;
-      // Re-evaluate button state from the snapshot without re-rendering the full UI.
-      if (state.snapshot) {
-        var canBuy = Boolean(state.snapshot.isSalesOpen) && Number(state.snapshot.availableMeals || 0) > 0;
-        els.submitButton.disabled = !canBuy;
-      } else {
-        els.submitButton.disabled = false;
-      }
+      // Re-evaluate button state from the current selected day
+      var day = state.weekMenus.find(function (d) { return d.date === state.selectedDate; });
+      els.submitButton.disabled = !(day && day.isOrderingOpen);
     }
   }
 
@@ -252,9 +384,6 @@
     banner.init();
     refreshSnapshot(false);
 
-    // Polling keeps the count fresh on slow/spotty connections.
-    // The interval is intentionally kept at 30 s here because the customer
-    // page has no Realtime connection (no Supabase auth in this view).
     window.setInterval(function () { refreshSnapshot(false); }, Number(config.refreshIntervalMs || 30000));
 
     if ("serviceWorker" in navigator) {

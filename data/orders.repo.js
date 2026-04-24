@@ -1,44 +1,44 @@
 import { supabase } from "../lib/supabase.js";
 
-const PAID_STATUSES    = ["PAGADO", "CONFIRMADO", "CONFIRMADO_SINPE"];
-const ACTIVE_FILTER    = "record_status";
-const ACTIVE_VALUE     = "CANCELADO";
+const PAID_STATUSES = ["PAGADO", "CONFIRMADO", "CONFIRMADO_SINPE"];
+const ACTIVE_FILTER = "record_status";
+const ACTIVE_VALUE  = "CANCELADO";
 
-// Returns aggregated stats for the day via the get_day_stats SQL function.
-// Replaces all JavaScript filter()/reduce() aggregations.
-export async function getStats(cafeteriaId, dayKey) {
+// Returns aggregated stats for a given target date via the get_day_stats SQL function.
+export async function getStats(cafeteriaId, targetDate) {
   const { data, error } = await supabase.rpc("get_day_stats", {
     p_cafeteria_id: cafeteriaId,
-    p_day_key:      dayKey
+    p_day_key:      targetDate
   });
 
   if (error) throw error;
   const row = (data && data[0]) || {};
   return {
-    totalOrders:        Number(row.total_orders          || 0),
-    paidOrders:         Number(row.paid_orders           || 0),
-    pendingPayment:     Number(row.pending_payment       || 0),
-    deliveredOrders:    Number(row.delivered_orders      || 0),
-    pendingDeliveries:  Number(row.pending_deliveries    || 0),
-    paidPendingDelivery:Number(row.paid_pending_delivery || 0),
-    sinpeCount:         Number(row.sinpe_count           || 0),
-    cashCount:          Number(row.cash_count            || 0),
-    totalAmount:        Number(row.total_amount          || 0)
+    totalOrders:         Number(row.total_orders          || 0),
+    paidOrders:          Number(row.paid_orders           || 0),
+    pendingPayment:      Number(row.pending_payment       || 0),
+    deliveredOrders:     Number(row.delivered_orders      || 0),
+    pendingDeliveries:   Number(row.pending_deliveries    || 0),
+    paidPendingDelivery: Number(row.paid_pending_delivery || 0),
+    sinpeCount:          Number(row.sinpe_count           || 0),
+    cashCount:           Number(row.cash_count            || 0),
+    totalAmount:         Number(row.total_amount          || 0)
   };
 }
 
-// Returns individual order rows for list rendering.
-// Only columns actually consumed by the snapshot builders are selected.
-export async function findToday(cafeteriaId, dayKey) {
+// Returns individual order rows for a given target_date.
+// Filters by target_date so pre-orders placed on earlier days appear
+// in the correct day's list.
+export async function findToday(cafeteriaId, targetDate) {
   const { data, error } = await supabase
     .from("orders")
     .select(
       "id, buyer_name, buyer_email, payment_method, payment_status, " +
-      "delivery_status, order_status, created_at, " +
+      "delivery_status, order_status, created_at, target_date, " +
       "payment_confirmed_at, delivered_at, menu_price, menu_title, tracking_token"
     )
     .eq("cafeteria_id", cafeteriaId)
-    .eq("day_key", dayKey)
+    .eq("target_date", targetDate)
     .neq(ACTIVE_FILTER, ACTIVE_VALUE)
     .order("created_at", { ascending: true });
 
@@ -47,7 +47,7 @@ export async function findToday(cafeteriaId, dayKey) {
 }
 
 // Returns full order rows for the admin payment-management panel.
-export async function findTodayForAdmin(cafeteriaId, dayKey) {
+export async function findTodayForAdmin(cafeteriaId, targetDate) {
   const { data, error } = await supabase
     .from("orders")
     .select(
@@ -55,7 +55,7 @@ export async function findTodayForAdmin(cafeteriaId, dayKey) {
       "payment_reference, created_at, payment_confirmed_at"
     )
     .eq("cafeteria_id", cafeteriaId)
-    .eq("day_key", dayKey)
+    .eq("target_date", targetDate)
     .neq(ACTIVE_FILTER, ACTIVE_VALUE)
     .order("created_at", { ascending: true });
 
@@ -70,7 +70,7 @@ export async function findAll(cafeteriaId) {
     .select(
       "id, buyer_name, buyer_phone, buyer_email, payment_method, payment_status, " +
       "payment_reference, menu_title, menu_description, menu_price, " +
-      "order_status, delivery_status, record_status, created_at, " +
+      "order_status, delivery_status, record_status, created_at, target_date, " +
       "payment_confirmed_at, delivered_at, day_key"
     )
     .eq("cafeteria_id", cafeteriaId)
@@ -80,14 +80,18 @@ export async function findAll(cafeteriaId) {
   return data || [];
 }
 
-// Fetches a single order row for mutation validation.
-export async function findById(orderId, cafeteriaId, dayKey) {
+// Fetches a single order for mutation validation.
+// Scoped to cafeteria_id only — no day restriction since staff may update
+// orders placed on a different day than the one being served.
+export async function findById(orderId, cafeteriaId) {
   const { data, error } = await supabase
     .from("orders")
-    .select("id, cafeteria_id, day_key, buyer_name, buyer_email, payment_status, delivery_status, tracking_token")
+    .select(
+      "id, cafeteria_id, day_key, target_date, buyer_name, buyer_email, " +
+      "payment_status, delivery_status, tracking_token"
+    )
     .eq("id", orderId)
     .eq("cafeteria_id", cafeteriaId)
-    .eq("day_key", dayKey)
     .neq(ACTIVE_FILTER, ACTIVE_VALUE)
     .single();
 
@@ -96,7 +100,6 @@ export async function findById(orderId, cafeteriaId, dayKey) {
 }
 
 // Advances the delivery workflow for one order.
-// Sets the matching timestamp column so the buyer tracking page can show precise times.
 export async function updateDelivery(orderId, cafeteriaId, deliveryStatus) {
   const now    = new Date().toISOString();
   const update = { delivery_status: deliveryStatus };
@@ -114,7 +117,6 @@ export async function updateDelivery(orderId, cafeteriaId, deliveryStatus) {
 }
 
 // Updates payment status. Only ADMIN may call this (enforced at the API layer).
-// verifiedByUserId is stored for accounting: who confirmed the SINPE transfer and when.
 export async function updatePayment(orderId, cafeteriaId, paymentStatus, verifiedByUserId = null) {
   const isConfirming = PAID_STATUSES.includes(paymentStatus);
   const update = {
@@ -133,23 +135,31 @@ export async function updatePayment(orderId, cafeteriaId, paymentStatus, verifie
 }
 
 // Appends an entry to the delivery audit log.
-export async function logDeliveryEvent(cafeteriaId, orderId, dayKey, deliveryStatus) {
+export async function logDeliveryEvent(cafeteriaId, orderId, targetDate, deliveryStatus) {
   const { error } = await supabase
     .from("delivery_events")
-    .insert({ cafeteria_id: cafeteriaId, order_id: orderId, day_key: dayKey, delivery_status: deliveryStatus });
+    .insert({
+      cafeteria_id:    cafeteriaId,
+      order_id:        orderId,
+      day_key:         targetDate,
+      delivery_status: deliveryStatus
+    });
 
   if (error) throw error;
 }
 
 // Atomic order creation — delegates to the PostgreSQL RPC to prevent overselling.
+// targetDate is the date the lunch is ordered FOR (may differ from dayKey/today).
 export async function createAtomic({
-  cafeteriaId, dayKey, buyerName, buyerEmail,
+  cafeteriaId, dayKey, targetDate,
+  buyerName, buyerEmail,
   menuId, menuTitle, menuDescription, menuPrice,
   paymentMethod, trackingToken
 }) {
   const { data, error } = await supabase.rpc("create_order_atomic", {
     p_cafeteria_id:     cafeteriaId,
     p_day_key:          dayKey,
+    p_target_date:      targetDate || dayKey,
     p_buyer_name:       buyerName,
     p_buyer_email:      buyerEmail,
     p_menu_id:          menuId || null,

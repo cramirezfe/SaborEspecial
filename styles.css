@@ -1595,3 +1595,200 @@ textarea {
   .customer-delivery-badge,
   .customer-delivered-at { display: none !important; }
 }
+
+
+/* ================================================================
+   WEEKLY SCHEDULING — new components (migration 010)
+   ================================================================ */
+
+/* ── Week grid (management planning) ────────────────────────── */
+
+.week-grid {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  scrollbar-width: thin;
+}
+
+.week-grid__card {
+  flex: 0 0 auto;
+  min-width: 120px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.week-grid__card.is-active {
+  border-color: var(--primary);
+  background: #fff4f5;
+}
+
+.week-grid__card.is-today {
+  box-shadow: 0 0 0 1px var(--secondary);
+}
+
+.week-grid__card.is-no-menu {
+  opacity: 0.55;
+}
+
+.week-grid__btn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  border-radius: 8px;
+}
+
+.week-grid__btn:hover {
+  background: rgba(163, 61, 77, 0.06);
+}
+
+.week-grid__day-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.week-grid__day-name em {
+  font-style: normal;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.week-grid__menu-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
+.week-grid__price {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* ── Day tabs (customer ordering) ───────────────────────────── */
+
+.card--week-nav {
+  padding: 1rem 1.25rem 0.85rem;
+}
+
+.card--week-nav .eyebrow {
+  margin: 0 0 0.6rem;
+}
+
+.week-tabs {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  scrollbar-width: thin;
+}
+
+.week-tab {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 72px;
+  padding: 0.55rem 0.7rem;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+  color: var(--text);
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.week-tab.is-active {
+  border-color: var(--primary);
+  background: #fff4f5;
+  color: var(--primary-dark);
+}
+
+.week-tab.is-no-menu {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.week-tab.is-closed {
+  opacity: 0.7;
+}
+
+.week-tab--loading {
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  border: none;
+  background: none;
+}
+
+.week-tab__day {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.week-tab__day em {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.week-tab__status {
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.week-tab.is-active .week-tab__status {
+  color: var(--primary);
+}
+
+/* ── Delivery date toggle (kitchen view) ────────────────────── */
+
+.delivery-date-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.delivery-date-btn {
+  padding: 0.5rem 1.1rem;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.delivery-date-btn.is-active {
+  border-color: var(--primary);
+  color: var(--primary-dark);
+  background: #fff4f5;
+}
+
+.delivery-date-btn:hover:not(.is-active) {
+  border-color: var(--secondary);
+  color: var(--text);
+}

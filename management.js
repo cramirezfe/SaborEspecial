@@ -1,31 +1,38 @@
 (function () {
   "use strict";
 
-  var accessToken  = "";
-  var userRole     = "";
-  var cafeteriaId  = "";
-  var isSaving     = false;
-  var realtimeChannel = null;
+  var accessToken      = "";
+  var userRole         = "";
+  var cafeteriaId      = "";
+  var isSaving         = false;
+  var realtimeChannel  = null;
+  var selectedDayKey   = "";   // The day currently loaded in the menu form
+  var weekMenus        = [];   // Cache of the 7-day grid data
 
-  // Shared modules loaded via <script> tags before this file.
   var banner = window.SE.banner;
   var fmt    = window.SE.fmt;
-  // api is created after accessToken is available; see init().
   var api;
+
+  // Spanish day abbreviations — index matches Date.getDay() (0=Sun, 1=Mon…)
+  var DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
   // ── Element refs ──────────────────────────────────────────────────
   var els = {
     pageTitle:         document.getElementById("mgmtPageTitle"),
     tabs:              document.getElementById("mgmtTabs"),
     updatedAt:         document.getElementById("mgmtUpdatedAt"),
+    // Weekly grid
+    weekCards:         document.getElementById("mgmtWeekCards"),
     // Menu form
     menuForm:          document.getElementById("mgmtMenuForm"),
+    menuDayKey:        document.getElementById("mgmtMenuDayKey"),
     menuTitleInput:    document.getElementById("mgmtMenuTitle"),
     menuDescInput:     document.getElementById("mgmtMenuDescription"),
     menuPriceInput:    document.getElementById("mgmtMenuPrice"),
     menuSubmit:        document.getElementById("mgmtMenuSubmit"),
     menuFeedback:      document.getElementById("mgmtMenuFeedback"),
     emailWarning:      document.getElementById("mgmtEmailWarning"),
+    selectedDayLabel:  document.getElementById("mgmtSelectedDayLabel"),
     exportButton:      document.getElementById("mgmtExportButton"),
     // Admin current-menu summary
     currentMenuTitle:  document.getElementById("mgmtCurrentMenuTitle"),
@@ -59,22 +66,35 @@
     logoutButton:      document.getElementById("mgmtLogoutButton")
   };
 
+  // ── Helpers ───────────────────────────────────────────────────────
+
+  function escHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function todayKeyFromBrowser() {
+    // Mirrors getDayKey() from lib/dashboard.js: UTC-6 shift.
+    return new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  }
+
+  function formatDateLabel(dateStr) {
+    // "2026-04-28" → "Mar 28 abr"
+    var d    = new Date(dateStr + "T12:00:00Z");
+    var day  = DIAS[d.getUTCDay()];
+    var dom  = d.getUTCDate();
+    var mon  = d.toLocaleDateString("es-CR", { month: "short", timeZone: "UTC" });
+    return day + " " + dom + " " + mon;
+  }
+
   // ── Role-based UI adaptation ──────────────────────────────────────
 
   function adaptToRole(role) {
     var isAdmin = role === "ADMIN";
-
-    // Show/hide role-specific sections
-    document.querySelectorAll(".admin-only").forEach(function (el) {
-      el.hidden = !isAdmin;
-    });
-    document.querySelectorAll(".helper-only").forEach(function (el) {
-      el.hidden = isAdmin;
-    });
-
-    if (els.pageTitle) {
-      els.pageTitle.textContent = isAdmin ? "Administración" : "Asistente";
-    }
+    document.querySelectorAll(".admin-only").forEach(function (el) { el.hidden = !isAdmin; });
+    document.querySelectorAll(".helper-only").forEach(function (el) { el.hidden = isAdmin; });
+    if (els.pageTitle) els.pageTitle.textContent = isAdmin ? "Administración" : "Asistente";
     document.title = (isAdmin ? "Administración" : "Asistente") + " | Almuerzos CEEP";
   }
 
@@ -85,22 +105,14 @@
     els.tabs.addEventListener("click", function (e) {
       var btn = e.target.closest(".admin-tab");
       if (!btn) return;
-
-      els.tabs.querySelectorAll(".admin-tab").forEach(function (t) {
-        t.classList.remove("is-active");
-      });
+      els.tabs.querySelectorAll(".admin-tab").forEach(function (t) { t.classList.remove("is-active"); });
       btn.classList.add("is-active");
-
       var targetId = btn.dataset.tab;
       ["mgmtOperationsTab", "mgmtInsightsTab"].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) el.hidden = (el.id !== targetId);
       });
-
-      // Lazy-load analytics when the tab is first opened.
-      if (targetId === "mgmtInsightsTab") {
-        refreshAnalytics();
-      }
+      if (targetId === "mgmtInsightsTab") refreshAnalytics();
     });
   }
 
@@ -124,6 +136,80 @@
     els.emailWarning.hidden = false;
   }
 
+  // ── Weekly grid ───────────────────────────────────────────────────
+
+  function renderWeekGrid(days) {
+    weekMenus = days || [];
+    if (!els.weekCards) return;
+    if (!weekMenus.length) {
+      els.weekCards.innerHTML = '<p class="insights-empty">No se pudo cargar la programación semanal.</p>';
+      return;
+    }
+
+    var todayKey = todayKeyFromBrowser();
+    var html = "";
+    weekMenus.forEach(function (day) {
+      var isToday    = day.date === todayKey;
+      var isSelected = day.date === selectedDayKey;
+      var hasMenu    = Boolean(day.menu);
+      var statusText = hasMenu ? escHtml(day.menu.title) : "Sin menú";
+      var cardClass  = "week-grid__card" +
+        (isSelected ? " is-active"   : "") +
+        (isToday    ? " is-today"    : "") +
+        (!hasMenu   ? " is-no-menu"  : "");
+
+      html +=
+        '<div class="' + cardClass + '" role="listitem">' +
+          '<button type="button" class="week-grid__btn" data-day-key="' + escHtml(day.date) + '" ' +
+            'aria-pressed="' + (isSelected ? "true" : "false") + '">' +
+            '<span class="week-grid__day-name">' + escHtml(formatDateLabel(day.date)) + (isToday ? ' <em>(hoy)</em>' : '') + '</span>' +
+            '<span class="week-grid__menu-title">' + statusText + '</span>' +
+            (hasMenu ? '<span class="week-grid__price">' + escHtml(fmt.currency(day.menu.price)) + '</span>' : '') +
+          '</button>' +
+        '</div>';
+    });
+    els.weekCards.innerHTML = html;
+
+    // Attach click handlers to each day button
+    els.weekCards.querySelectorAll(".week-grid__btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        selectDay(btn.dataset.dayKey);
+      });
+    });
+  }
+
+  function selectDay(dayKey) {
+    selectedDayKey = dayKey;
+
+    // Update form state
+    if (els.menuDayKey) els.menuDayKey.value = dayKey;
+
+    var todayKey   = todayKeyFromBrowser();
+    var dateLabel  = dayKey === todayKey ? "hoy (" + formatDateLabel(dayKey) + ")" : formatDateLabel(dayKey);
+    if (els.selectedDayLabel) els.selectedDayLabel.textContent = dateLabel;
+
+    // Pre-fill form with this day's existing menu if available
+    if (!isSaving) {
+      var day = weekMenus.find(function (d) { return d.date === dayKey; });
+      var menu = day && day.menu;
+      if (els.menuTitleInput)  els.menuTitleInput.value  = menu ? menu.title       : "";
+      if (els.menuDescInput)   els.menuDescInput.value   = menu ? menu.description : "";
+      if (els.menuPriceInput)  els.menuPriceInput.value  = menu ? menu.price       : "";
+    }
+
+    // Refresh the visual selection state in the grid
+    if (els.weekCards) {
+      els.weekCards.querySelectorAll(".week-grid__card").forEach(function (card) {
+        var btn = card.querySelector(".week-grid__btn");
+        var isActive = btn && btn.dataset.dayKey === dayKey;
+        card.classList.toggle("is-active", isActive);
+        if (btn) btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
+    }
+
+    setFeedback("", false);
+  }
+
   // ── ADMIN rendering ───────────────────────────────────────────────
 
   function renderDashboard(snapshot) {
@@ -135,18 +221,12 @@
     if (els.availableMeals)     els.availableMeals.textContent    = String(snapshot.availableMeals || 0);
     if (els.salesWindow)        els.salesWindow.textContent       = snapshot.salesWindow    || "-";
     if (els.deliveryWindow)     els.deliveryWindow.textContent    = snapshot.deliveryWindow || "-";
-
-    if (!isSaving) {
-      if (els.menuTitleInput)   els.menuTitleInput.value  = menu.title       || "";
-      if (els.menuDescInput)    els.menuDescInput.value   = menu.description || "";
-      if (els.menuPriceInput)   els.menuPriceInput.value  = menu.price       || "";
-    }
   }
 
   function renderAdminOrders(snapshot) {
-    if (els.adminTotal)   els.adminTotal.textContent   = String(snapshot.totalOrders        || 0);
-    if (els.adminPaid)    els.adminPaid.textContent    = String(snapshot.paidCount          || 0);
-    if (els.adminPending) els.adminPending.textContent = String(snapshot.pendingPaymentCount|| 0);
+    if (els.adminTotal)   els.adminTotal.textContent   = String(snapshot.totalOrders         || 0);
+    if (els.adminPaid)    els.adminPaid.textContent    = String(snapshot.paidCount           || 0);
+    if (els.adminPending) els.adminPending.textContent = String(snapshot.pendingPaymentCount || 0);
 
     if (!els.adminOrdersList || !els.adminRowTemplate) return;
     els.adminOrdersList.innerHTML = "";
@@ -176,9 +256,7 @@
 
       node.querySelectorAll(".payment-toggle").forEach(function (btn) {
         btn.classList.toggle("is-selected", btn.dataset.paymentStatus === order.paymentStatus);
-        btn.addEventListener("click", function () {
-          updatePaymentStatus(order.id, btn.dataset.paymentStatus);
-        });
+        btn.addEventListener("click", function () { updatePaymentStatus(order.id, btn.dataset.paymentStatus); });
       });
 
       fragment.appendChild(node);
@@ -190,18 +268,11 @@
 
   function renderDeliveries(snapshot) {
     if (els.updatedAt)          els.updatedAt.textContent          = fmt.dateTime(snapshot.updatedAt);
-    if (els.totalOrders)        els.totalOrders.textContent        = String(snapshot.totalOrders       || 0);
-    if (els.pendingPayment)     els.pendingPayment.textContent     = String(snapshot.pendingPaymentCount|| 0);
-    if (els.paidOrders)         els.paidOrders.textContent         = String(snapshot.paidOrders        || 0);
-    if (els.deliveredOrders)    els.deliveredOrders.textContent    = String(snapshot.deliveredOrders   || 0);
-    if (els.pendingDeliveries)  els.pendingDeliveries.textContent  = String(snapshot.pendingDeliveries || 0);
-
-    var menu = snapshot.menu || {};
-    if (!isSaving) {
-      if (els.menuTitleInput)  els.menuTitleInput.value  = menu.title       || "";
-      if (els.menuDescInput)   els.menuDescInput.value   = menu.description || "";
-      if (els.menuPriceInput)  els.menuPriceInput.value  = menu.price       || "";
-    }
+    if (els.totalOrders)        els.totalOrders.textContent        = String(snapshot.totalOrders        || 0);
+    if (els.pendingPayment)     els.pendingPayment.textContent     = String(snapshot.pendingPaymentCount || 0);
+    if (els.paidOrders)         els.paidOrders.textContent         = String(snapshot.paidOrders         || 0);
+    if (els.deliveredOrders)    els.deliveredOrders.textContent    = String(snapshot.deliveredOrders    || 0);
+    if (els.pendingDeliveries)  els.pendingDeliveries.textContent  = String(snapshot.pendingDeliveries  || 0);
 
     if (!els.helperOrdersList || !els.helperRowTemplate) return;
     els.helperOrdersList.innerHTML = "";
@@ -229,9 +300,7 @@
 
       node.querySelectorAll(".helper-delivery-action").forEach(function (btn) {
         btn.classList.toggle("is-selected", btn.dataset.deliveryStatus === order.deliveryStatus);
-        btn.addEventListener("click", function () {
-          updateDeliveryStatus(order.id, btn.dataset.deliveryStatus);
-        });
+        btn.addEventListener("click", function () { updateDeliveryStatus(order.id, btn.dataset.deliveryStatus); });
       });
 
       fragment.appendChild(node);
@@ -242,12 +311,6 @@
   // ── Insights rendering (ADMIN only) ──────────────────────────────
 
   var DOW_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-
-  function escHtml(str) {
-    return String(str || "")
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  }
 
   function renderPrepList(prep) {
     if (!prep || !prep.length) {
@@ -329,7 +392,7 @@
     var peaks = heatmap.filter(function (r) { return maxAvg > 0 && Number(r.avg_per_day || 0) >= maxAvg * 0.85; });
     if (peaks.length) {
       var labels = peaks.map(function (r) { return String(Number(r.hour_of_day)).padStart(2, "0") + ":00"; }).join(", ");
-      html += '<p class="muted" style="margin-top:0.9rem;font-size:0.85rem;">Pico de mayor demanda: <strong>' + escHtml(labels) + '</strong>. Ideal para tener el equipo completo disponible.</p>';
+      html += '<p class="muted" style="margin-top:0.9rem;font-size:0.85rem;">Pico de mayor demanda: <strong>' + escHtml(labels) + '</strong>.</p>';
     }
     els.heatmap.innerHTML = html;
   }
@@ -346,8 +409,9 @@
     weekly.forEach(function (row) {
       var cancelled  = Number(row.cancelled_orders      || 0);
       var cancelRate = Number(row.cancellation_rate_pct || 0);
-      var weekLabel  = row.week_start ? new Intl.DateTimeFormat("es-CR", { day: "2-digit", month: "short", timeZone: "UTC" }).format(new Date(row.week_start + "T12:00:00Z")) : "-";
-
+      var weekLabel  = row.week_start
+        ? new Intl.DateTimeFormat("es-CR", { day: "2-digit", month: "short", timeZone: "UTC" }).format(new Date(row.week_start + "T12:00:00Z"))
+        : "-";
       html +=
         '<div class="weekly-table__row">' +
           '<span>' + escHtml(weekLabel) + '</span>' +
@@ -363,11 +427,24 @@
 
   // ── Data fetching ─────────────────────────────────────────────────
 
+  async function loadWeekMenus() {
+    try {
+      var result = await api.fetchJson("/menu");
+      renderWeekGrid(result.weekMenus || []);
+      // Auto-select today if nothing is selected yet
+      if (!selectedDayKey && result.weekMenus && result.weekMenus.length) {
+        selectDay(result.weekMenus[0].date);
+      }
+    } catch (_) {
+      if (els.weekCards) els.weekCards.innerHTML = '<p class="insights-empty">Error al cargar la semana.</p>';
+    }
+  }
+
   async function refreshDashboard() {
     try {
       var snapshot = await api.fetchJson("/dashboard");
       renderDashboard(snapshot);
-      setBannerSynced();
+      banner.setSynced();
     } catch (err) {
       setFeedback(err.message, true);
     }
@@ -386,10 +463,10 @@
     try {
       var snapshot = await api.fetchJson("/deliveries");
       renderDeliveries(snapshot);
-      setBannerSynced();
+      banner.setSynced();
     } catch (err) {
       setFeedback(err.message, true);
-      setBannerError(loadAll);
+      banner.setError(loadAll);
     }
   }
 
@@ -409,9 +486,9 @@
   async function loadAll() {
     banner.setSyncing();
     if (userRole === "ADMIN") {
-      await Promise.all([refreshDashboard(), refreshAdminOrders()]);
+      await Promise.all([refreshDashboard(), refreshAdminOrders(), loadWeekMenus()]);
     } else {
-      await refreshDeliveries();
+      await Promise.all([refreshDeliveries(), loadWeekMenus()]);
     }
   }
 
@@ -425,21 +502,31 @@
     var title = String(fd.get("title") || "").trim();
     var desc  = String(fd.get("description") || "").trim();
     var price = Number(fd.get("price") || 0);
+    var dayKey = String(fd.get("dayKey") || selectedDayKey || "").trim();
 
     if (!title || !desc || price < 0) {
       setFeedback("Complete el nombre, descripción y precio.", true);
       return;
     }
+    if (!dayKey) {
+      setFeedback("Selecciona un día en la cuadrícula semanal.", true);
+      return;
+    }
 
     isSaving = true;
     els.menuSubmit.disabled = true;
-    setFeedback("Guardando menú del día...", false);
+    setFeedback("Guardando menú...", false);
     banner.setSyncing();
 
     try {
-      var result = await api.fetchJson("/menu", { method: "POST", body: { menu: { title, description: desc, price } } });
+      var result = await api.fetchJson("/menu", {
+        method: "POST",
+        body:   { menu: { title, description: desc, price }, dayKey }
+      });
       setFeedback(result.message || "Menú actualizado correctamente.", false);
       clearEmailWarning();
+      // Refresh the weekly grid so the saved day shows the new menu
+      await loadWeekMenus();
       if (result.snapshot && userRole === "ADMIN") renderDashboard(result.snapshot);
       if (userRole === "ADMIN") await refreshAdminOrders();
       else                      await refreshDeliveries();
@@ -502,9 +589,7 @@
     }
   }
 
-  // ── Supabase Realtime subscription (Priority 6) ───────────────────
-  // When any order changes for this cafeteria, trigger a lightweight
-  // refresh. The 60 s setInterval below is the offline fallback only.
+  // ── Supabase Realtime subscription ───────────────────────────────
 
   function subscribeRealtime(cid) {
     var cfg = window.APP_CONFIG || {};
@@ -512,10 +597,7 @@
         !cfg.supabaseAnonKey || cfg.supabaseAnonKey.includes("REPLACE_WITH")) {
       return;
     }
-
-    if (realtimeChannel) {
-      window.supabaseClient.removeChannel(realtimeChannel);
-    }
+    if (realtimeChannel) window.supabaseClient.removeChannel(realtimeChannel);
 
     realtimeChannel = window.supabaseClient
       .channel("management-" + cid)
@@ -524,15 +606,10 @@
         schema: "public",
         table:  "orders",
         filter: "cafeteria_id=eq." + cid
-      }, function () {
-        // Ignore events triggered by this same session's mutations
-        // (the mutation handlers already update the UI synchronously).
-        loadAll();
-      })
+      }, function () { loadAll(); })
       .subscribe();
   }
 
-  // Banner wrappers (used by async functions above)
   function setBannerSynced() { banner.setSynced(); }
   function setBannerError(fn) { banner.setError(fn); }
 
@@ -541,25 +618,18 @@
   async function start() {
     banner.init();
 
-    // 1. Verify Supabase session.
     var sessionResult = await window.supabaseClient.auth.getSession();
     var session       = sessionResult.data && sessionResult.data.session;
-    if (!session) {
-      window.location.replace("./index.html");
-      return;
-    }
+    if (!session) { window.location.replace("./index.html"); return; }
     accessToken = session.access_token;
 
-    // 2. Keep token fresh.
     window.supabaseClient.auth.onAuthStateChange(function (event, newSession) {
       if (!newSession) { window.location.replace("./index.html"); return; }
       accessToken = newSession.access_token;
     });
 
-    // 3. Bind api client now that accessToken is set.
     api = window.SE.api.make(function () { return accessToken; });
 
-    // 4. Fetch authoritative role + cafeteriaId from the server.
     var roleData;
     try {
       roleData = await api.fetchJson("/auth-role");
@@ -570,11 +640,9 @@
     userRole    = roleData.role;
     cafeteriaId = roleData.cafeteriaId;
 
-    // 5. Adapt the page to this role.
     adaptToRole(userRole);
     if (userRole === "ADMIN") initTabs();
 
-    // 6. Wire up interactions.
     if (els.menuForm)     els.menuForm.addEventListener("submit", submitMenu);
     if (els.exportButton) els.exportButton.addEventListener("click", exportOrders);
     if (els.logoutButton) els.logoutButton.addEventListener("click", function () {
@@ -582,16 +650,10 @@
       window.location.replace("./index.html");
     });
 
-    // 7. Initial data load.
     await loadAll();
-
-    // 8. Realtime — instant updates on order changes.
     subscribeRealtime(cafeteriaId);
-
-    // 9. 60 s fallback for environments where WebSockets are blocked.
     window.setInterval(loadAll, 60000);
 
-    // 10. Analytics: background refresh every 5 min (ADMIN only, lazy).
     if (userRole === "ADMIN") {
       window.setInterval(function () {
         var insightsTab = document.getElementById("mgmtInsightsTab");

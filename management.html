@@ -37,21 +37,36 @@
            ================================================================ -->
       <section id="mgmtOperationsTab" class="admin-content">
 
-        <!-- Menu form — both roles -->
+        <!-- ── Weekly schedule grid — both roles ─────────────────── -->
+        <section class="card admin-card">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Próximos 7 días</p>
+              <h2>Programación semanal</h2>
+            </div>
+            <span id="mgmtUpdatedAt" class="muted">Sincronizando...</span>
+          </div>
+          <div id="mgmtWeekCards" class="week-grid" role="list" aria-label="Días de la semana">
+            <p class="insights-empty">Cargando semana...</p>
+          </div>
+        </section>
+
+        <!-- ── Menu form — both roles ─────────────────────────────── -->
         <section class="card admin-card">
           <div class="section-title">
             <div>
               <p class="eyebrow">Formulario</p>
-              <h2>Menú de hoy</h2>
+              <h2>Menú del <span id="mgmtSelectedDayLabel">día</span></h2>
             </div>
             <div class="admin-actions">
-              <span id="mgmtUpdatedAt" class="muted">Sincronizando...</span>
               <!-- Export button — ADMIN only -->
               <button id="mgmtExportButton" type="button" class="button button--ghost admin-only" hidden>Exportar Excel</button>
             </div>
           </div>
 
           <form id="mgmtMenuForm" class="form">
+            <!-- hidden: tracks which day is being edited -->
+            <input type="hidden" id="mgmtMenuDayKey" name="dayKey">
             <label>
               Nombre del menú
               <input id="mgmtMenuTitle" name="title" type="text" maxlength="120" required>
@@ -64,7 +79,7 @@
               Precio en colones
               <input id="mgmtMenuPrice" name="price" type="number" min="0" step="1" required>
             </label>
-            <button id="mgmtMenuSubmit" type="submit" class="button">Guardar menú de hoy</button>
+            <button id="mgmtMenuSubmit" type="submit" class="button">Guardar menú</button>
             <p id="mgmtMenuFeedback" class="feedback" aria-live="polite"></p>
             <p id="mgmtEmailWarning" class="email-warning" hidden></p>
           </form>
