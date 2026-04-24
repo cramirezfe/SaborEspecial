@@ -108,6 +108,36 @@
     els.trackingLinkSection.hidden = false;
   }
 
+  // ── Optimistic UI helpers ─────────────────────────────────────────
+
+  function addOptimisticOrder(buyerName, paymentMethod) {
+    var empty = els.buyersList.querySelector(".delivery-table__empty");
+    if (empty) empty.remove();
+
+    var fragment = els.buyerRowTemplate.content.cloneNode(true);
+    var row = fragment.firstElementChild;
+    row.dataset.optimistic = "true";
+
+    fragment.querySelector(".buyer-name").textContent = buyerName;
+    fragment.querySelector(".buyer-meta").textContent = [paymentMethod, "PENDIENTE DE PAGO", "Ahora"].join(" | ");
+    fragment.querySelector(".customer-order-status").textContent = "SOLICITADO";
+    fragment.querySelector(".customer-created-at").textContent = "Ahora";
+
+    var payNode = fragment.querySelector(".customer-payment-status");
+    payNode.textContent = "PENDIENTE DE PAGO";
+    payNode.className = "delivery-payment-status customer-payment-status";
+
+    fragment.querySelector(".customer-payment-confirmed-at").textContent = "";
+    fragment.querySelector(".customer-delivery-badge").textContent = "Solicitado";
+    fragment.querySelector(".customer-delivered-at").textContent = "";
+
+    els.buyersList.insertBefore(fragment, els.buyersList.firstChild);
+  }
+
+  function removeOptimisticOrders() {
+    els.buyersList.querySelectorAll("[data-optimistic]").forEach(function (el) { el.remove(); });
+  }
+
   // ── Network ───────────────────────────────────────────────────────
 
   async function refreshSnapshot(showErrors) {
@@ -131,7 +161,7 @@
     event.preventDefault();
     if (state.isSubmitting) return;
 
-    var fd     = new FormData(els.orderForm);
+    var fd      = new FormData(els.orderForm);
     var payload = {
       buyerName:     String(fd.get("buyerName")     || "").trim(),
       buyerEmail:    String(fd.get("buyerEmail")     || "").trim().toLowerCase(),
@@ -143,10 +173,17 @@
       return;
     }
 
-    state.isSubmitting      = true;
+    state.isSubmitting        = true;
     els.submitButton.disabled = true;
-    setFeedback("Registrando compra...", false);
     banner.setSyncing();
+
+    // Optimistic UI: give instant feedback before the server responds.
+    var prevAvailable = Number(els.availableCount.textContent) || 0;
+    els.orderForm.reset();
+    selectPaymentMethod("");
+    setFeedback("Compra registrada correctamente.", false);
+    addOptimisticOrder(payload.buyerName, payload.paymentMethod);
+    if (prevAvailable > 0) els.availableCount.textContent = String(prevAvailable - 1);
 
     try {
       var result = await api.fetchJson("/orders?slug=" + encodeURIComponent(slug), {
@@ -156,10 +193,6 @@
 
       if (!result.ok) throw new Error(result.message || "No se pudo registrar la compra.");
 
-      els.orderForm.reset();
-      selectPaymentMethod("");
-      setFeedback(result.message || "Compra registrada correctamente.", false);
-
       if (result.trackingToken) {
         var trackingUrl = window.location.origin +
           window.location.pathname.replace(/[^/]*$/, "") +
@@ -167,15 +200,26 @@
         showTrackingLink(trackingUrl);
       }
 
+      // Replace optimistic row with confirmed server data.
       if (result.snapshot) { saveCache(result.snapshot); renderSnapshot(result.snapshot); }
       else                 { await refreshSnapshot(false); }
+      setFeedback(result.message || "Compra registrada correctamente.", false);
+      banner.setSynced();
     } catch (err) {
+      // Rollback: undo optimistic changes and surface the error.
+      removeOptimisticOrders();
+      els.availableCount.textContent = String(prevAvailable);
       setFeedback(err.message, true);
       banner.setError(null);
     } finally {
       state.isSubmitting = false;
-      if (state.snapshot) renderSnapshot(state.snapshot);
-      else                els.submitButton.disabled = false;
+      // Re-evaluate button state from the snapshot without re-rendering the full UI.
+      if (state.snapshot) {
+        var canBuy = Boolean(state.snapshot.isSalesOpen) && Number(state.snapshot.availableMeals || 0) > 0;
+        els.submitButton.disabled = !canBuy;
+      } else {
+        els.submitButton.disabled = false;
+      }
     }
   }
 

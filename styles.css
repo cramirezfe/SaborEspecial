@@ -1493,3 +1493,92 @@ textarea {
   font-weight: 600;
   color: var(--muted, #888);
 }
+
+/* ── Thermal Print (kitchen ticket) ──────────────────────────────── */
+/* Works in Chrome/Safari on desktop and mobile (Share → Print).      */
+@media print {
+  @page {
+    margin: 8mm 6mm;
+    size: auto;
+  }
+
+  /* Hide every decoration and hide the full page, then reveal only the
+     order rows so each one prints as a standalone kitchen ticket. */
+  body > *                { display: none !important; }
+  .site-shell             { display: block !important; }
+  .status-banner,
+  .site-header,
+  .site-footer,
+  .hero,
+  .card--menu,
+  .customer-order-card,
+  .tracking-link-card,
+  .delivery-table__head,
+  .customer-delivery-table__head { display: none !important; }
+
+  .site-shell,
+  .layout,
+  .delivery-table-card,
+  .customer-tracking-card,
+  .delivery-table,
+  .customer-delivery-table,
+  .delivery-table__body,
+  #buyersList             { display: block !important; width: 100% !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; border: none !important; background: #fff !important; }
+
+  /* Each order row becomes its own ticket, separated by a page break. */
+  .delivery-table__row {
+    display: block !important;
+    page-break-after: always;
+    break-after: page;
+    border: 2px solid #000 !important;
+    border-radius: 0 !important;
+    padding: 12px 14px !important;
+    margin: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  .delivery-table__row:last-child {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  /* Large buyer name — the most important item on the ticket. */
+  .buyer-name,
+  .delivery-name-card {
+    display: block !important;
+    font-size: 2.2rem !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.02em !important;
+    color: #000 !important;
+    margin-bottom: 6px !important;
+    line-height: 1.1 !important;
+  }
+
+  /* Simple meta line: payment method + status. */
+  .buyer-meta,
+  .delivery-order-meta {
+    display: block !important;
+    font-size: 1rem !important;
+    color: #333 !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Show order and payment status as plain text. */
+  .delivery-table__cell  { display: block !important; padding: 2px 0 !important; }
+  .delivery-order-status-pill,
+  .delivery-payment-status {
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    color: #000 !important;
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+
+  /* De-emphasise timestamps; hide delivery badge (not needed in kitchen). */
+  .delivery-status-time  { font-size: 0.8rem !important; color: #555 !important; margin: 0 !important; }
+  .customer-delivery-badge,
+  .customer-delivered-at { display: none !important; }
+}
