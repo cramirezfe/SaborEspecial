@@ -2344,3 +2344,287 @@ textarea {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ==========================================================================
+   Kitchen High-Contrast Mode — deliveries.html
+   Designed for long-distance reading (~2 m) on tablets/phones under bright
+   kitchen lighting. Every action reachable in ≤ 3 taps from this screen.
+   ========================================================================== */
+
+/* Buyer name — bold, inverted, legible at distance */
+.delivery-page .delivery-name-card {
+  font-size: clamp(1.65rem, 3.2vw, 2.5rem);
+  font-weight: 900;
+  background: #1c1208;
+  color: #f5f0e8;
+  padding: 0.55rem 0.9rem;
+  border-radius: 8px;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  word-break: break-word;
+}
+
+/* Layout wrapper so order-number badge sits inline with name */
+.delivery-name-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* Short order-ID badge (#XXXXX) next to the name */
+.delivery-order-number {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  background: var(--primary);
+  color: #fff;
+  padding: 0.18rem 0.45rem;
+  border-radius: 3px;
+  letter-spacing: 0.08em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* Summary counters — bigger digits for at-a-glance scanning */
+.delivery-page .delivery-summary strong {
+  font-size: clamp(2.4rem, 5vw, 3.2rem);
+}
+
+/* Give the name column more real-estate */
+.delivery-page .delivery-table__head,
+.delivery-page .delivery-table__row {
+  grid-template-columns:
+    minmax(260px, 1.5fr)
+    minmax(140px, 0.65fr)
+    minmax(200px, 0.85fr)
+    minmax(140px, 0.6fr)
+    minmax(210px, 0.9fr);
+}
+
+/* Taller rows → easier to find an order at a glance */
+.delivery-page .delivery-table__row {
+  padding: 1.1rem 0.15rem;
+}
+
+.delivery-page .delivery-table__cell {
+  grid-template-rows: minmax(4.5rem, auto) minmax(2.6rem, auto);
+}
+
+/* ── Three-Tap action buttons ─────────────────────────────────── */
+
+.delivery-page .delivery-action {
+  min-height: 4.8rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: transform 80ms ease, box-shadow 80ms ease, background 80ms ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Tactile "press" feedback on touch */
+.delivery-page .delivery-action:active {
+  transform: scale(0.94);
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.22);
+}
+
+/* SINPE verify — high-visibility amber so it's never missed */
+.delivery-page .delivery-action--sinpe-verify {
+  background: #f0a800;
+  border-color: #c88200;
+  color: #1a0e00;
+}
+
+.delivery-page .delivery-action--sinpe-verify:active {
+  background: #c88200;
+}
+
+/* Date-toggle — larger tap target */
+.delivery-page .delivery-date-btn {
+  min-height: 3rem;
+  padding: 0.65rem 1.4rem;
+  font-size: 0.95rem;
+}
+
+/* ── Quick-Add ("+ Venta directa") toolbar button ─────────────── */
+
+.quick-add-btn {
+  background: var(--success);
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 0.75rem 1.3rem;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.quick-add-btn:hover,
+.quick-add-btn:focus-visible {
+  background: #256b4f;
+  transform: translateY(-1px);
+}
+
+.quick-add-btn:active {
+  transform: scale(0.96);
+}
+
+/* ==========================================================================
+   Quick-Add Walk-in POS Dialog
+   Defaults: Cash + Today. Max 3 taps: open → (name) → Confirm.
+   Buttons are oversized for greasy/gloved hands in a kitchen environment.
+   ========================================================================== */
+
+.quick-add-dialog {
+  border: 0;
+  border-radius: 24px;
+  padding: 0;
+  background: var(--surface);
+  box-shadow: 0 28px 70px rgba(76, 47, 34, 0.2);
+  max-width: 460px;
+  width: calc(100% - 2rem);
+  overflow: hidden;
+}
+
+.quick-add-dialog::backdrop {
+  background: rgba(45, 34, 28, 0.62);
+  backdrop-filter: blur(3px);
+}
+
+.quick-add-dialog__header {
+  padding: 1.75rem 2rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.quick-add-dialog__title {
+  margin: 0 0 0.3rem;
+  font-size: 1.6rem;
+  color: var(--text);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.quick-add-dialog__subtitle {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.quick-add-dialog__form {
+  padding: 1.5rem 2rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+}
+
+.quick-add-dialog__label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.quick-add-dialog__optional {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.quick-add-dialog__input {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  font-size: 1.1rem;
+  font-family: inherit;
+  background: var(--surface-strong);
+  color: var(--text);
+  transition: border-color 0.15s;
+}
+
+.quick-add-dialog__input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.quick-add-dialog__fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.quick-add-dialog__legend {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+/* Payment method — large touch targets, no mis-taps */
+.qa-payment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.qa-payment-option {
+  min-height: 5.5rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+  border-radius: 16px;
+  border: 2px solid rgba(131, 47, 61, 0.22);
+  background: var(--surface-strong);
+  color: var(--primary-dark);
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 80ms ease, background 80ms ease, border-color 80ms ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.qa-payment-option:active {
+  transform: scale(0.95);
+}
+
+.qa-payment-option.is-selected {
+  background: var(--primary-dark);
+  color: #fffaf5;
+  border-color: var(--primary-dark);
+  box-shadow: 0 4px 14px rgba(131, 47, 61, 0.28);
+}
+
+.quick-add-dialog__actions {
+  display: flex;
+  gap: 0.65rem;
+}
+
+/* Confirm — full-width, large, impossible to miss */
+.quick-add-dialog__confirm {
+  flex: 1;
+  min-height: 4.5rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  border-radius: 14px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: transform 80ms ease, background 80ms ease;
+}
+
+.quick-add-dialog__confirm:active {
+  transform: scale(0.97);
+}
+
+.quick-add-dialog__cancel {
+  font-size: 1rem;
+  min-height: 4.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 14px;
+}
+
+.quick-add-dialog__feedback {
+  margin: 0;
+  min-height: 1.4rem;
+  font-size: 0.9rem;
+}

@@ -25,6 +25,9 @@
           <span id="deliveriesMenuTitle" hidden>Cargando menú...</span>
           <div class="delivery-toolbar__actions">
             <span id="deliveriesUpdatedAt" class="muted">Sincronizando...</span>
+            <button type="button" id="deliveriesQuickAddBtn" class="button quick-add-btn">
+              + Venta directa
+            </button>
           </div>
         </div>
 
@@ -86,7 +89,10 @@
   <template id="deliveryRowTemplate">
     <article class="delivery-table__row">
       <div class="delivery-table__cell delivery-table__cell--start">
-        <strong class="buyer-name delivery-name-card"></strong>
+        <div class="delivery-name-block">
+          <strong class="buyer-name delivery-name-card"></strong>
+          <span class="delivery-order-number"></span>
+        </div>
         <p class="delivery-order-meta"></p>
       </div>
       <div class="delivery-table__cell">
@@ -107,6 +113,34 @@
       </div>
     </article>
   </template>
+
+  <!-- ── Quick-Add walk-in modal ─────────────────────────────────── -->
+  <dialog id="quickAddDialog" class="quick-add-dialog" aria-labelledby="quickAddDialogTitle">
+    <div class="quick-add-dialog__header">
+      <h2 id="quickAddDialogTitle" class="quick-add-dialog__title">Venta directa</h2>
+      <p class="quick-add-dialog__subtitle">Registra la venta de un cliente que llegó en persona</p>
+    </div>
+    <form id="quickAddForm" class="quick-add-dialog__form" method="dialog" novalidate>
+      <label class="quick-add-dialog__label">
+        Nombre del cliente <span class="quick-add-dialog__optional">(opcional)</span>
+        <input id="qaName" type="text" class="quick-add-dialog__input"
+               placeholder="Cliente" maxlength="80" autocomplete="off" inputmode="text">
+      </label>
+      <fieldset class="quick-add-dialog__fieldset">
+        <legend class="quick-add-dialog__legend">Método de pago</legend>
+        <div class="qa-payment-grid">
+          <button type="button" class="qa-payment-option is-selected" data-method="EFECTIVO">Efectivo</button>
+          <button type="button" class="qa-payment-option" data-method="SINPE">SINPE</button>
+        </div>
+        <input type="hidden" id="qaMethod" value="EFECTIVO">
+      </fieldset>
+      <div class="quick-add-dialog__actions">
+        <button type="button" id="qaSubmit" class="button quick-add-dialog__confirm">Confirmar Venta</button>
+        <button type="button" id="qaCancel" class="button button--ghost quick-add-dialog__cancel">Cancelar</button>
+      </div>
+      <p id="qaFeedback" class="feedback quick-add-dialog__feedback" aria-live="polite"></p>
+    </form>
+  </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="./config.js"></script>

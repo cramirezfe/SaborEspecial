@@ -8,6 +8,7 @@
   var CACHE_KEY       = "ceep-deliveries-cache-v1";
   var accessToken     = "";
   var realtimeChannel = null;
+  var isSaving        = false;
   var api;
 
   // "today" or "tomorrow" — controls which target_date the kitchen sees.
@@ -24,7 +25,15 @@
     rowTemplate:        document.getElementById("deliveryRowTemplate"),
     logoutButton:       document.getElementById("deliveriesLogoutButton"),
     todayBtn:           document.getElementById("deliveriesTodayBtn"),
-    tomorrowBtn:        document.getElementById("deliveriesTomorrowBtn")
+    tomorrowBtn:        document.getElementById("deliveriesTomorrowBtn"),
+    // Quick-Add walk-in modal
+    quickAddBtn:        document.getElementById("deliveriesQuickAddBtn"),
+    quickAddDialog:     document.getElementById("quickAddDialog"),
+    qaName:             document.getElementById("qaName"),
+    qaMethod:           document.getElementById("qaMethod"),
+    qaSubmit:           document.getElementById("qaSubmit"),
+    qaCancel:           document.getElementById("qaCancel"),
+    qaFeedback:         document.getElementById("qaFeedback")
   };
 
   // ── Date helpers (mirrors getDayKey in lib/dashboard.js) ──────────
@@ -124,6 +133,8 @@
       }
 
       node.querySelector(".buyer-name").textContent             = order.buyerName;
+      var numEl = node.querySelector(".delivery-order-number");
+      if (numEl) numEl.textContent = "#" + String(order.id || "").slice(-5).toUpperCase();
       node.querySelector(".delivery-order-meta").textContent    = [order.paymentMethod, order.timestampLabel].filter(Boolean).join(" | ");
       node.querySelector(".delivery-order-status").textContent  = order.orderStatus || "SOLICITADO";
       node.querySelector(".delivery-created-at").textContent    = order.createdAtLabel || "";
@@ -231,6 +242,80 @@
       .subscribe();
   }
 
+  // ── Quick-Add walk-in POS modal ───────────────────────────────────
+
+  function openQuickAdd() {
+    if (!els.quickAddDialog) return;
+    if (els.qaName)     els.qaName.value   = "";
+    if (els.qaMethod)   els.qaMethod.value = "EFECTIVO";
+    if (els.qaFeedback) els.qaFeedback.textContent = "";
+    if (els.qaSubmit)   els.qaSubmit.disabled = false;
+    els.quickAddDialog.querySelectorAll(".qa-payment-option").forEach(function (btn) {
+      btn.classList.toggle("is-selected", btn.dataset.method === "EFECTIVO");
+    });
+    els.quickAddDialog.showModal();
+    if (els.qaName) els.qaName.focus();
+  }
+
+  async function submitQuickAdd() {
+    if (isSaving) return;
+    var name   = (els.qaName   ? els.qaName.value   : "").trim() || "Cliente";
+    var method = (els.qaMethod ? els.qaMethod.value : "EFECTIVO");
+    var today  = crDateKey(0);
+
+    isSaving = true;
+    if (els.qaSubmit)   els.qaSubmit.disabled = true;
+    if (els.qaFeedback) {
+      els.qaFeedback.textContent = "Registrando venta...";
+      els.qaFeedback.style.color = "var(--muted)";
+    }
+    try {
+      var result = await api.fetchJson("/orders", {
+        method: "POST",
+        body: { order: { buyerName: name, paymentMethod: method, targetDate: today } }
+      });
+      if (!result.ok) throw new Error(result.message || "No se pudo registrar la venta.");
+      els.quickAddDialog.close();
+      await refreshSnapshot();
+    } catch (err) {
+      if (els.qaFeedback) {
+        els.qaFeedback.textContent = err.message || "Error al registrar la venta.";
+        els.qaFeedback.style.color = "var(--primary-dark)";
+      }
+    } finally {
+      isSaving = false;
+      if (els.qaSubmit) els.qaSubmit.disabled = false;
+    }
+  }
+
+  function initQuickAdd() {
+    if (!els.quickAddBtn || !els.quickAddDialog) return;
+
+    els.quickAddBtn.addEventListener("click", openQuickAdd);
+
+    if (els.qaCancel) {
+      els.qaCancel.addEventListener("click", function () {
+        if (!isSaving) els.quickAddDialog.close();
+      });
+    }
+
+    els.quickAddDialog.addEventListener("click", function (e) {
+      if (e.target === els.quickAddDialog && !isSaving) els.quickAddDialog.close();
+    });
+
+    els.quickAddDialog.querySelectorAll(".qa-payment-option").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        els.quickAddDialog.querySelectorAll(".qa-payment-option").forEach(function (b) {
+          b.classList.remove("is-selected");
+        });
+        btn.classList.add("is-selected");
+        if (els.qaMethod) els.qaMethod.value = btn.dataset.method;
+      });
+    });
+
+    if (els.qaSubmit) els.qaSubmit.addEventListener("click", submitQuickAdd);
+  }
+
   // ── Init ──────────────────────────────────────────────────────────
 
   async function start() {
@@ -265,6 +350,8 @@
     // Wire up date toggle buttons
     if (els.todayBtn)    els.todayBtn.addEventListener("click",    function () { setDateMode("today"); });
     if (els.tomorrowBtn) els.tomorrowBtn.addEventListener("click", function () { setDateMode("tomorrow"); });
+
+    initQuickAdd();
 
     var cached = loadCached();
     if (cached) renderSnapshot(cached);
