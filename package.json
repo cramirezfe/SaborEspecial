@@ -2,6 +2,12 @@
   "name": "ceep-almuerzos-app",
   "private": true,
   "type": "module",
+  "scripts": {
+    "setup":      "bash setup.sh",
+    "start":      "vercel dev",
+    "db:seed":    "node scripts/seed.js",
+    "test":       "node scripts/test-integrity.js"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4"
   }

@@ -1,171 +1,67 @@
-# Almuerzos CEEP
+# Sabor Especial
 
-Aplicacion web estatica y liviana para administrar la venta diaria de almuerzos usando Google Sheets como almacenamiento.
+Sistema de pedidos de almuerzo para sodas y cafeterías. Multi-tenant, PWA, desplegable en Vercel + Supabase.
 
-## Lo que resuelve
+## Inicio rápido (< 5 minutos)
 
-- Muestra el menu del dia.
-- Muestra cuantos almuerzos quedan disponibles.
-- Respeta el maximo diario de 15 almuerzos.
-- Registra solicitudes sin tiquete fisico.
-- Lleva reporte de pagos en tiempo real.
-- Muestra una lista de compras para cocina.
-- Guarda el detalle del menu junto con cada venta.
-
-## Enfoque para internet lento
-
-- No usa frameworks ni librerias externas.
-- Solo carga HTML, CSS y JavaScript planos.
-- Guarda el ultimo estado localmente en el navegador.
-- Incluye Service Worker para reutilizar archivos estaticos.
-- Reduce llamadas al servidor con refresco cada 30 segundos.
-
-## Estructura
-
-- `index.html`: interfaz principal.
-- `styles.css`: estilos.
-- `app.js`: logica cliente.
-- `config.js`: configuracion del endpoint.
-- `sw.js`: cache local de archivos estaticos.
-- `google-apps-script/Code.gs`: backend para Google Sheets.
-- `google-apps-script/README.md`: guia de configuracion del backend.
-
-## Publicacion
-
-Puede publicar esta carpeta como sitio estatico en:
-
-- GitHub Pages
-- Netlify
-- Vercel
-- Google Sites por medio de un iframe o enlace
-
-Si cuando dijo "Google Pages" se referia a `GitHub Pages`, esta estructura ya funciona muy bien ahi.
-
-## Backend con MongoDB Atlas
-
-Si quiere usar MongoDB Atlas, mantenga el frontend en GitHub Pages y despliegue el backend en Vercel.
-
-La zona horaria operativa del sistema es `America/Costa_Rica`.
-
-### Variables de entorno en Vercel
-
-- `MONGODB_URI`
-- `MONGODB_DB_NAME=ceep_lunches`
-- `ADMIN_SECRET`
-- `ORDERS_PASSWORD`
-
-### Colecciones esperadas
-
-- `settings`
-- `menus`
-- `orders`
-
-### Documento inicial en `settings`
-
-```json
-{
-  "key": "app_config",
-  "timezone": "America/Costa_Rica",
-  "maxMeals": 15,
-  "salesStart": "10:00",
-  "salesEnd": "12:00",
-  "deliveryWindow": "12:00 - 12:30",
-  "disableSalesWindow": true,
-  "message": "Venta maxima de 15 almuerzos por dia."
-}
-```
-
-### Documento inicial en `menus`
-
-```json
-{
-  "dayKey": "2026-04-09",
-  "title": "Casado con pollo",
-  "description": "Arroz, frijoles, ensalada, pollo y fresco natural",
-  "price": 1000,
-  "active": true
-}
-```
-
-### Endpoints
-
-- `GET /api/dashboard`
-- `POST /api/orders`
-- `POST /api/menu`
-- `GET /api/deliveries`
-- `POST /api/deliveries`
-- `POST /api/orders-export`
-
-### Actualizar el menú sin entrar a MongoDB
-
-La web ahora incluye un formulario administrativo para guardar el menú del día directamente en MongoDB.
-
-Para que funcione:
-
-1. Cree `ADMIN_SECRET` en Vercel con una clave privada.
-2. En la página, abra la sección `Actualizar menú del día`.
-3. Escriba la clave, el nombre del menú, la descripción y el precio.
-4. El sistema guardará o actualizará automáticamente el menú de la fecha actual en MongoDB.
-
-### Exportar pedidos a Excel
-
-La página de administración incluye un botón `Exportar Excel`.
-
-1. Ingrese con la clave administrativa.
-2. Haga clic en `Exportar Excel`.
-3. El sistema descargará un archivo `.csv` compatible con Excel con todos los documentos de `orders`, totalmente tabulados.
-
-### Vista protegida de entregas
-
-La web incluye `deliveries.html`, protegida con la variable `ORDERS_PASSWORD` en Vercel.
-
-1. Cree `ORDERS_PASSWORD` en Vercel.
-2. Entre a `Entregas` desde la navegación.
-3. Ingrese la clave.
-4. La página mostrará la lista del día para cocina y entregas.
-5. Cocina puede marcar cada pedido como `Pendiente` o `Entregado`.
-6. Cada cambio queda persistido en el pedido y además registra un evento en la colección `delivery_events`.
-
-### Configuracion del frontend
-
-En `config.js`, reemplace:
-
-```js
-apiBaseUrl: "PEGUE_AQUI_SU_URL_DE_VERCEL_API"
-```
-
-por algo como:
-
-```js
-apiBaseUrl: "https://su-proyecto.vercel.app/api"
-```
-
-## Uso local
-
-Abra `index.html` con un servidor estatico simple o publique el sitio directamente.
-
-Si quiere probar localmente y tiene Python:
+**Requisitos previos:** Node.js 18+, cuenta en [Supabase](https://supabase.com) (gratis)
 
 ```bash
-python3 -m http.server 8080
+git clone https://github.com/viniesqui/saborespecial.git
+cd saborespecial
+npm run setup     # asistente interactivo: credenciales → base de datos → cafetería de prueba
+npm start         # → http://localhost:3000
 ```
 
-Luego abra `http://localhost:8080`.
+El asistente `setup` pregunta tus credenciales de Supabase **una sola vez** y configura todo lo demás automáticamente.
 
-## Siguiente paso recomendado
+---
 
-1. Configurar la hoja y el Apps Script.
-2. Pegar la URL del Web App en `config.js`.
-3. Publicar esta carpeta en el hosting estatico de su preferencia.
+## Lo que necesitas de Supabase
 
-## Precio actual
+Crea un proyecto gratis en [supabase.com/dashboard](https://supabase.com/dashboard) y copia:
 
-El precio esperado por almuerzo es `1000` colones. En la hoja `Settings`, use:
+| Valor | Dónde encontrarlo |
+|-------|-------------------|
+| Project URL | Settings → API → Project URL |
+| anon key | Settings → API → Project API keys |
+| service_role key | Settings → API → Project API keys |
 
-- `menuPrice` = `1000`
+---
 
-## Pruebas sin horario
+## Base de datos
 
-Si quiere desactivar temporalmente el limite de horario para hacer pruebas, en la hoja `Settings` use:
+El asistente genera `supabase/schema.sql` con el esquema completo. Pégalo **una sola vez** en el [Editor SQL de Supabase](https://supabase.com/dashboard) cuando te lo pida.
 
-- `disableSalesWindow` = `true`
+---
+
+## URLs de la aplicación
+
+| Quién | URL |
+|-------|-----|
+| Clientes | `http://localhost:3000/s/<slug>` |
+| Administración | `http://localhost:3000/management.html?slug=<slug>` |
+| Cocina | `http://localhost:3000/deliveries.html?slug=<slug>` |
+
+Las contraseñas de administración y cocina se muestran al terminar `npm run setup`.
+
+---
+
+## Comandos
+
+| Comando | Descripción |
+|---------|-------------|
+| `npm run setup` | Asistente de configuración inicial |
+| `npm start` | Inicia el servidor local (`vercel dev`) |
+| `npm run db:seed` | Crea/resetea la cafetería de prueba |
+| `npm test` | Suite de pruebas automatizada |
+
+---
+
+## Despliegue a producción
+
+1. `vercel --prod` (necesitas cuenta en [vercel.com](https://vercel.com))
+2. Agrega las variables de `.env.local` en Vercel → Settings → Environment Variables
+3. Actualiza `CORS_ORIGIN` con tu dominio real
+
+Para detalles de producción ver `DEVELOPER_QUICKSTART.md`.
