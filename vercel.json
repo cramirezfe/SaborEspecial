@@ -1,6 +1,7 @@
 {
   "rewrites": [
-    { "source": "/s/:slug", "destination": "/customer-app.html" },
-    { "source": "/s/:slug/(.*)", "destination": "/customer-app.html" }
+    { "source": "/config.js",        "destination": "/api/config-js"      },
+    { "source": "/s/:slug",          "destination": "/customer-app.html"  },
+    { "source": "/s/:slug/(.*)",     "destination": "/customer-app.html"  }
   ]
 }

@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // Seed a test cafeteria for local development.
 // Uses the service role key to bypass RLS — never run in production.
-//
+
+import "./env.js";
+
 // Required env vars:
 //   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 // Optional:
@@ -9,6 +11,7 @@
 //   CAFETERIA_NAME  (default: Cafetería de Prueba)
 
 import { createClient } from "@supabase/supabase-js";
+
 
 const {
   SUPABASE_URL,
