@@ -263,3 +263,180 @@ See `PRODUCTION_CHECKLIST.md` for the full pre-launch validation checklist.
 
 **Service Worker serving stale pages after a deploy**
 → Update the cache version constant in `sw.js` and redeploy. Clients will pick up the new version on next load.
+
+---
+
+## Going to production — checklist for a real cafeteria
+
+Everything above runs on `localhost`. This section covers what it takes to hand a live URL to a cafeteria and have them run their lunch service from day one.
+
+### Step 1 — Deploy the backend to Vercel
+
+```bash
+# Link the repo and follow the prompts
+vercel link
+
+# Set every required env var (do this once; values persist across deploys)
+vercel env add SUPABASE_URL
+vercel env add SUPABASE_SERVICE_ROLE_KEY
+vercel env add SUPABASE_ANON_KEY
+vercel env add CAFETERIA_ID        # UUID from the onboarding step below
+vercel env add APP_BASE_URL        # e.g. https://mi-soda.vercel.app
+vercel env add ADMIN_SECRET        # strong random string — share only with the admin
+vercel env add ORDERS_PASSWORD     # share only with kitchen staff
+vercel env add RESEND_API_KEY      # see Step 4
+vercel env add CORS_ORIGIN         # exact frontend origin, e.g. https://mi-soda.vercel.app
+
+# Deploy
+vercel --prod
+```
+
+The API is now live at `https://<your-project>.vercel.app/api`.
+
+> Set `CORS_ORIGIN` to the exact frontend domain. Leaving it as `*` is fine for testing but not for production.
+
+---
+
+### Step 2 — Update `config.js` for production
+
+`config.js` ships with placeholder values. Replace them before the final deploy:
+
+```js
+supabaseUrl:     "https://xxxxxxxxxxxx.supabase.co",   // your real project URL
+supabaseAnonKey: "eyJ..."                               // your real anon key
+```
+
+The `apiBaseUrl` is derived from `window.location.origin` at runtime, so it automatically matches whatever domain you deploy to — no change needed.
+
+Commit this file and redeploy:
+
+```bash
+git add config.js
+git commit -m "config: set production Supabase credentials"
+vercel --prod
+```
+
+---
+
+### Step 3 — Onboard the cafeteria as a tenant
+
+Every cafeteria needs a row in the `cafeterias` table. The onboarding endpoint handles this:
+
+```bash
+curl -X POST https://<your-project>.vercel.app/api/onboard \
+  -H "Content-Type: application/json" \
+  -d '{
+    "slug": "mi-soda",
+    "name": "Mi Soda",
+    "adminEmail": "admin@mi-soda.com"
+  }'
+```
+
+This returns a `cafeteria_id` UUID. Copy it into the `CAFETERIA_ID` env var in Vercel (`vercel env add CAFETERIA_ID`) and redeploy.
+
+The onboarding trigger also creates default `settings` (max 15 meals, sales window 10:00–12:00 CR, timezone `America/Costa_Rica`). The admin can adjust these from the management panel after launch.
+
+---
+
+### Step 4 — Set up email (Resend)
+
+Order confirmations and payment notifications go through [Resend](https://resend.com).
+
+1. Create a free account at resend.com.
+2. Add and verify your sender domain (e.g. `notificaciones@mi-soda.com`).
+3. Create an API key and set it as `RESEND_API_KEY` in Vercel.
+4. Test: place a test order with a real email address and confirm the confirmation email arrives.
+
+If you skip this step, orders still work — email calls fail silently and are logged to the `error_logs` table.
+
+---
+
+### Step 5 — (Optional) Set a custom domain
+
+A cafeteria will share the URL with customers. `mi-soda.vercel.app` works but a custom domain looks more professional.
+
+In the Vercel dashboard → your project → **Settings → Domains** → add your domain and follow the DNS instructions. The app needs no code changes — `config.js` resolves `apiBaseUrl` from `window.location.origin` automatically.
+
+---
+
+### Step 6 — Harden Supabase for production
+
+| Setting | Where | Recommended value |
+|---------|-------|------------------|
+| Row Level Security | Supabase → Authentication → Policies | Enabled on all tables (migration 014 applies this) |
+| JWT expiry | Supabase → Authentication → Settings | 1 hour (default) |
+| Service role key exposure | — | Never in `config.js` or any client-side file |
+| Database connection pooler | Supabase → Settings → Database | Use the pooler URL for high concurrency |
+
+Migration `014_security_hardening.sql` already enables RLS policies. Confirm they are active:
+
+```sql
+-- Run in Supabase SQL editor
+SELECT tablename, rowsecurity FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY tablename;
+-- rowsecurity should be 't' for every table
+```
+
+---
+
+### Step 7 — Share URLs with staff
+
+Once deployed, the cafeteria team needs exactly three URLs:
+
+| Who | URL | Password needed |
+|-----|-----|----------------|
+| Customers | `https://your-domain.com/s/mi-soda` | None |
+| Admin / owner | `https://your-domain.com/management.html?slug=mi-soda` | `ADMIN_SECRET` |
+| Kitchen staff | `https://your-domain.com/deliveries.html?slug=mi-soda` | `ORDERS_PASSWORD` |
+
+Save these as bookmarks or a shared note. The customer URL is safe to post publicly (WhatsApp group, notice board, etc.).
+
+---
+
+### Step 8 — Run the pre-launch checklist
+
+Before the first real lunch service, work through `PRODUCTION_CHECKLIST.md` from top to bottom. The eight checks take about 30 minutes and cover the scenarios most likely to fail in a real cafeteria rush:
+
+- Service Worker installation and offline fallback
+- SINPE payment state transitions
+- Double-click / high-latency guard
+- Multi-tenant data isolation
+- Midnight counter reset (UTC-6 boundary)
+- Cache version bump protocol
+- Post-launch monitoring thresholds
+
+```bash
+# Run the automated suite one final time against the live URL
+API_BASE_URL=https://your-domain.com node scripts/test-integrity.js
+```
+
+---
+
+### Step 9 — First day monitoring
+
+Watch these four signals during the first lunch rush (10:00–12:00 CR):
+
+| Signal | Where to check | Action if wrong |
+|--------|---------------|-----------------|
+| `availableMeals` goes negative | Supabase → `orders` table row count vs `settings.max_meals` | Check `place_order_atomic` function is deployed |
+| Orders not appearing in kitchen view | Deliveries page auto-refreshes every 30 s — check the network tab | Confirm `ORDERS_PASSWORD` is set correctly |
+| Duplicate orders (same name, same minute) | Supabase → `orders` table | The `isSubmitting` guard in `app.js` should prevent this; check browser console for JS errors |
+| Email confirmations not arriving | Resend dashboard → logs | Verify `RESEND_API_KEY` and sender domain are confirmed |
+
+Supabase logs are at **Dashboard → Logs → API** and give a real-time view of every request and error.
+
+---
+
+### Production readiness summary
+
+| # | Item | Done when… |
+|---|------|------------|
+| 1 | Vercel deployment with all env vars | `GET /api/health` returns 200 |
+| 2 | `config.js` has real Supabase credentials | Login works in production URL |
+| 3 | Cafeteria onboarded via `/api/onboard` | `CAFETERIA_ID` env var is set |
+| 4 | Email configured (Resend) | Test order sends a confirmation email |
+| 5 | RLS enabled on all tables | SQL check returns `rowsecurity = t` for all |
+| 6 | Staff URLs documented and shared | Admin, kitchen, and customer links bookmarked |
+| 7 | `PRODUCTION_CHECKLIST.md` fully green | All 8 checks marked DONE |
+| 8 | First 30-minute monitoring done | No errors in Supabase logs or Vercel logs |
