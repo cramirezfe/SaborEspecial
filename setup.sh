@@ -150,7 +150,7 @@ CAFE_ID=$(echo "${SEED_OUT}" | grep '^ID:'   | sed 's/^ID://'   || true)
 
 [ -n "$SLUG" ] && {
   ok "Cafetería: ${SLUG}"
-  sed -i "s|^CAFETERIA_SLUG=.*|CAFETERIA_SLUG=${SLUG}|" .env.local
+  tmp=$(mktemp) && sed "s|^CAFETERIA_SLUG=.*|CAFETERIA_SLUG=${SLUG}|" .env.local > "$tmp" && mv "$tmp" .env.local
 }
 
 # ── Done ──────────────────────────────────────────────────────────────────────
