@@ -1,18 +1,13 @@
 (function () {
   "use strict";
 
-  const config = window.APP_CONFIG || {};
-  const SESSION_KEY = "ceep-role-session";
-  const ROLE_ROUTE_MAP = {
-    CUSTOMER: "./customer-app.html",
-    HELPER: "./helper.html",
-    ADMIN: "./admin.html",
-    ORDERS: "./deliveries.html"
-  };
-  const els = {
-    form: document.getElementById("loginForm"),
+  var config = window.APP_CONFIG || {};
+
+  var els = {
+    form:     document.getElementById("loginForm"),
+    email:    document.getElementById("loginEmail"),
     password: document.getElementById("loginPassword"),
-    submit: document.getElementById("loginSubmit"),
+    submit:   document.getElementById("loginSubmit"),
     feedback: document.getElementById("loginFeedback")
   };
 
@@ -21,41 +16,14 @@
     els.feedback.style.color = isError ? "#842f3d" : "#705d52";
   }
 
-  function getSession() {
-    try {
-      const raw = sessionStorage.getItem(SESSION_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch (error) {
-      return null;
-    }
-  }
-
-  async function fetchJson(path, options) {
-    const response = await fetch(config.apiBaseUrl + path, {
-      method: options?.method || "GET",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: options?.body ? JSON.stringify(options.body) : undefined
-    });
-
-    const payload = await response.json().catch(function () {
-      return null;
-    });
-
-    if (!response.ok) {
-      throw new Error((payload && payload.message) || "No fue posible completar la solicitud.");
-    }
-
-    return payload;
-  }
-
   async function submitLogin(event) {
     event.preventDefault();
-    const password = String(els.password.value || "").trim();
 
-    if (!password) {
-      setFeedback("Ingrese la clave.", true);
+    var email    = String(els.email.value    || "").trim();
+    var password = String(els.password.value || "").trim();
+
+    if (!email || !password) {
+      setFeedback("Ingrese su correo y contraseña.", true);
       return;
     }
 
@@ -63,27 +31,56 @@
     setFeedback("Verificando acceso...", false);
 
     try {
-      const result = await fetchJson("/auth-role", {
-        method: "POST",
-        body: { password }
+      // 1. Authenticate — returns a session with access_token.
+      var authResult = await window.supabaseClient.auth.signInWithPassword({ email: email, password: password });
+      var authError  = authResult.error;
+      var authData   = authResult.data;
+
+      if (authError || !authData.session) {
+        throw new Error((authError && authError.message) || "Credenciales incorrectas.");
+      }
+
+      var token = authData.session.access_token;
+
+      // 2. Resolve role + redirect route from the server.
+      var res     = await fetch(config.apiBaseUrl + "/auth-role", {
+        headers: { "Authorization": "Bearer " + token }
       });
+      var payload = await res.json().catch(function () { return null; });
 
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-        role: result.role,
-        password
-      }));
+      if (!res.ok || !payload || !payload.ok) {
+        throw new Error((payload && payload.message) || "No fue posible determinar el rol.");
+      }
 
-      window.location.href = result.route;
+      // route is returned by the server; no client-side ROLE_ROUTE_MAP needed.
+      window.location.replace(payload.route);
     } catch (error) {
       setFeedback(error.message, true);
       els.submit.disabled = false;
     }
   }
 
-  const session = getSession();
-  if (session && session.role && ROLE_ROUTE_MAP[session.role]) {
-    window.location.replace(ROLE_ROUTE_MAP[session.role]);
+  // Skip login if a valid session already exists.
+  async function redirectIfAuthenticated() {
+    if (!window.supabaseClient) return;
+
+    var sessionResult = await window.supabaseClient.auth.getSession();
+    var session       = sessionResult.data && sessionResult.data.session;
+    if (!session) return;
+
+    try {
+      var res     = await fetch(config.apiBaseUrl + "/auth-role", {
+        headers: { "Authorization": "Bearer " + session.access_token }
+      });
+      var payload = await res.json().catch(function () { return null; });
+      if (payload && payload.ok && payload.route) {
+        window.location.replace(payload.route);
+      }
+    } catch (_) {
+      // Session exists but role lookup failed — stay on login.
+    }
   }
 
+  redirectIfAuthenticated();
   els.form.addEventListener("submit", submitLogin);
 })();

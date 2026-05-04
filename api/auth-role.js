@@ -1,49 +1,34 @@
 import { handleOptions, setCors } from "../lib/http.js";
+import { requireAuth }           from "../lib/auth.js";
 
-const ROLE_MAP = [
-  {
-    role: "CUSTOMER",
-    envKey: "CUSTOMER_PASSWORD",
-    route: "./customer-app.html"
-  },
-  {
-    role: "HELPER",
-    envKey: "HELPER_PASSWORD",
-    route: "./helper.html"
-  },
-  {
-    role: "ADMIN",
-    envKey: "ADMIN_SECRET",
-    route: "./admin.html"
-  },
-  {
-    role: "ORDERS",
-    envKey: "ORDERS_PASSWORD",
-    route: "./deliveries.html"
-  }
-];
+// ADMIN and HELPER share the merged management interface.
+// ORDERS role keeps its dedicated delivery board.
+const ROLE_ROUTE_MAP = {
+  ADMIN:  "./management.html",
+  HELPER: "./management.html",
+  ORDERS: "./deliveries.html"
+};
 
 export default async function handler(req, res) {
   if (handleOptions(req, res)) return;
   setCors(res);
 
-  if (req.method !== "POST") {
+  if (req.method !== "GET" && req.method !== "POST") {
     return res.status(405).json({ ok: false, message: "Method not allowed" });
   }
 
-  const password = String(req.body?.password || "").trim();
-  if (!password) {
-    return res.status(400).json({ ok: false, message: "Ingrese una clave." });
+  try {
+    const { role, cafeteriaId } = await requireAuth(req, ["ADMIN", "HELPER", "ORDERS"]);
+    return res.status(200).json({
+      ok:          true,
+      role,
+      cafeteriaId,
+      route:       ROLE_ROUTE_MAP[role]
+    });
+  } catch (err) {
+    return res.status(err.status ?? 500).json({
+      ok:      false,
+      message: err.message ?? "Error de autenticación."
+    });
   }
-
-  const match = ROLE_MAP.find((item) => String(process.env[item.envKey] || "") === password);
-  if (!match) {
-    return res.status(401).json({ ok: false, message: "Clave incorrecta." });
-  }
-
-  return res.status(200).json({
-    ok: true,
-    role: match.role,
-    route: match.route
-  });
 }

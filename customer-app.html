@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+  <div id="statusBanner" class="status-banner" role="status" aria-live="polite"></div>
   <div class="site-shell">
     <header class="site-header">
       <a href="./customer-app.html" class="site-brand">Almuerzos CEEP</a>
@@ -19,10 +20,21 @@
     </header>
 
   <main class="layout">
+
+    <!-- ── Day selector ──────────────────────────────────────────── -->
+    <section class="card card--week-nav">
+      <p class="eyebrow">¿Para qué día?</p>
+      <div id="weekDayTabs" class="week-tabs" role="tablist" aria-label="Seleccionar día">
+        <!-- Populated by app.js -->
+        <span class="week-tab week-tab--loading">Cargando...</span>
+      </div>
+    </section>
+
+    <!-- ── Menu of the selected day ──────────────────────────────── -->
     <section class="card card--menu">
       <div class="section-title">
         <div>
-          <p class="eyebrow">Menú del día</p>
+          <p class="eyebrow" id="menuDayEyebrow">Menú del día</p>
           <h2 id="menuTitle">Cargando menú...</h2>
         </div>
         <div class="availability">
@@ -47,8 +59,8 @@
     <section class="card customer-order-card">
       <div class="section-title">
         <div>
-          <p class="eyebrow">Solicitud</p>
-          <h2>Registrar compra</h2>
+          <p class="eyebrow">Tu pedido</p>
+          <h2>Pedir almuerzo</h2>
         </div>
       </div>
 
@@ -56,6 +68,12 @@
         <label>
           Nombre completo
           <input id="buyerName" name="buyerName" type="text" maxlength="80" required autocomplete="name">
+        </label>
+
+        <label>
+          Correo electrónico <span style="font-weight:normal;font-size:0.9em;color:var(--muted)">(opcional — para seguimiento)</span>
+          <input id="buyerEmail" name="buyerEmail" type="email" maxlength="120" autocomplete="email" placeholder="tu@correo.com">
+          <span id="creditBalanceBadge" class="credit-balance-badge" hidden></span>
         </label>
 
         <label>
@@ -68,20 +86,96 @@
             <button type="button" class="payment-option" data-payment-method="EFECTIVO" aria-pressed="false">
               Efectivo
             </button>
+            <button type="button" class="payment-option payment-option--credit" id="creditPaymentOption"
+                    data-payment-method="CREDITO" aria-pressed="false" hidden>
+              Usar Crédito
+            </button>
           </div>
         </label>
 
-        <button id="submitButton" type="submit" class="button">Registrar almuerzo</button>
+        <button id="submitButton" type="submit" class="button">Pedir mi almuerzo</button>
         <p id="formFeedback" class="feedback" aria-live="polite"></p>
       </form>
+    </section>
+
+    <!-- Tracking link — shown after order submission -->
+    <section id="trackingLinkSection" class="card tracking-link-card" hidden>
+      <p class="eyebrow">¡Listo!</p>
+      <h2 style="margin:0 0 0.5rem">Tu almuerzo fue registrado</h2>
+      <p style="margin:0 0 1rem;color:var(--muted)">
+        Toca el botón para ver cuándo estará listo. No necesitas cuenta ni contraseña.
+      </p>
+      <div class="tracking-link-box">
+        <a id="trackingLink" href="#" class="button" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none">
+          Ver estado de mi almuerzo →
+        </a>
+      </div>
+    </section>
+
+    <!-- ── Package purchase section ───────────────────────────── -->
+    <section class="card card--packages" id="packagesSection">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Paquetes prepagados</p>
+          <h2>Comprar paquete de almuerzos</h2>
+        </div>
+      </div>
+      <p class="menu-description" style="margin:0 0 1rem">
+        Compra un paquete de almuerzos y paga una sola vez. Luego selecciona <strong>"Usar Crédito"</strong> en el formulario de pedido cada día.
+      </p>
+
+      <div id="packagesList" class="packages-grid">
+        <span class="muted">Cargando paquetes...</span>
+      </div>
+
+      <!-- Package purchase form — revealed when a package card is selected -->
+      <form id="packageForm" class="form" style="margin-top:1.25rem" hidden>
+        <p id="selectedPackageLabel" class="package-selected-label"></p>
+
+        <label>
+          Nombre completo
+          <input id="pkgBuyerName" name="pkgBuyerName" type="text" maxlength="80" required autocomplete="name">
+        </label>
+
+        <label>
+          Correo electrónico <span style="font-weight:normal;font-size:0.9em">(los créditos quedarán asociados a este correo)</span>
+          <input id="pkgBuyerEmail" name="pkgBuyerEmail" type="email" maxlength="120" required autocomplete="email" placeholder="ejemplo@correo.com">
+        </label>
+
+        <label>
+          Método de pago
+          <input id="pkgPaymentMethod" name="pkgPaymentMethod" type="hidden" required>
+          <div class="payment-methods" role="radiogroup" aria-label="Metodo de pago del paquete">
+            <button type="button" class="payment-option pkg-payment-option" data-payment-method="SINPE" aria-pressed="false">
+              SINPE móvil
+            </button>
+            <button type="button" class="payment-option pkg-payment-option" data-payment-method="EFECTIVO" aria-pressed="false">
+              Efectivo
+            </button>
+          </div>
+        </label>
+
+        <button id="pkgSubmitButton" type="submit" class="button">Solicitar paquete</button>
+        <p id="pkgFormFeedback" class="feedback" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <!-- Package tracking confirmation — shown after package purchase -->
+    <section id="pkgTrackingSection" class="card tracking-link-card" hidden>
+      <p class="eyebrow">¡Paquete solicitado!</p>
+      <h2 style="margin:0 0 0.5rem">Verificación de pago pendiente</h2>
+      <p style="margin:0 0 1rem;color:var(--muted)" id="pkgTrackingMessage"></p>
+      <div class="tracking-link-box">
+        <a id="pkgTrackingLink" href="#" class="tracking-link" target="_blank" rel="noopener"></a>
+      </div>
     </section>
 
     <section class="card delivery-table-card customer-tracking-card">
       <div class="delivery-table customer-delivery-table">
         <div class="delivery-table__head customer-delivery-table__head">
-          <span>PEDIDO</span>
-          <span>SOLICITUD</span>
-          <span>ESTADO DEL PAGO</span>
+          <span>NOMBRE</span>
+          <span>HORA</span>
+          <span>PAGO</span>
           <span>ENTREGA</span>
         </div>
         <div id="buyersList" class="delivery-table__body">
@@ -117,7 +211,11 @@
     </article>
   </template>
 
-  <script src="./config.js"></script>
+  <script src="/config.js"></script>
+  <script src="./lib/logger.js"></script>
+  <script src="./shared/status-banner.js"></script>
+  <script src="./shared/api-client.js"></script>
+  <script src="./shared/formatters.js"></script>
   <script src="./app.js" defer></script>
 </body>
 </html>

@@ -413,6 +413,19 @@ textarea {
   border-color: var(--primary-dark);
 }
 
+/* SINPE orders awaiting manual payment confirmation */
+.delivery-table__row.is-sinpe-pending {
+  background: #fffbec;
+  border-left: 3px solid #c89a00;
+}
+
+.delivery-action--sinpe-verify {
+  background: #fffbec;
+  border-color: #c89a00;
+  color: #7a5c00;
+  font-weight: 700;
+}
+
 .delivery-table {
   display: grid;
   gap: 0.3rem;
@@ -865,6 +878,219 @@ textarea {
   font-size: 1.05rem;
 }
 
+/* ==========================================================================
+   Tracking page (track.html)
+   ========================================================================== */
+
+.track-layout {
+  width: min(640px, calc(100% - 2rem));
+  margin: 2rem auto 0;
+  padding: 0 0 3rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.track-card {
+  padding: 1.5rem;
+}
+
+.track-loading-text {
+  color: var(--muted);
+  text-align: center;
+  padding: 2rem 0;
+  margin: 0;
+}
+
+.track-error-message {
+  color: var(--primary-dark);
+  margin: 0.5rem 0 0;
+}
+
+/* Live indicator badge */
+.track-live-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.track-live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+  transition: background 300ms ease;
+}
+
+.track-live-dot.is-connected {
+  background: var(--success);
+  animation: track-pulse 2s ease-in-out infinite;
+}
+
+@keyframes track-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+/* 5-step timeline */
+.track-timeline {
+  list-style: none;
+  margin: 1.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+
+.track-step {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr;
+  gap: 0.85rem;
+  align-items: start;
+  position: relative;
+  padding-bottom: 1.5rem;
+}
+
+.track-step:last-child {
+  padding-bottom: 0;
+}
+
+/* Vertical connector line */
+.track-step::before {
+  content: "";
+  position: absolute;
+  left: calc(2.4rem / 2 - 1px);
+  top: 2.4rem;
+  bottom: 0;
+  width: 2px;
+  background: var(--border);
+  transition: background 300ms ease;
+}
+
+.track-step:last-child::before {
+  display: none;
+}
+
+.track-step.is-done::before {
+  background: var(--success);
+}
+
+/* Step icon circle */
+.track-step__icon {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  transition: background 300ms ease, border-color 300ms ease;
+}
+
+.track-step.is-done .track-step__icon {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+.track-step.is-done .track-step__icon::after {
+  content: "✓";
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.track-step.is-active .track-step__icon {
+  background: var(--primary);
+  border-color: var(--primary);
+  animation: track-pulse 2s ease-in-out infinite;
+}
+
+.track-step.is-active .track-step__icon::after {
+  content: "●";
+  color: #fff;
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
+/* Step text */
+.track-step__body {
+  padding-top: 0.35rem;
+}
+
+.track-step__label {
+  display: block;
+  font-size: 1rem;
+  transition: color 300ms ease;
+}
+
+.track-step.is-pending .track-step__label {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.track-step.is-active .track-step__label {
+  color: var(--primary-dark);
+  font-weight: 800;
+}
+
+.track-step.is-done .track-step__label {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.track-step__time {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-weight: 600;
+  min-height: 1.1rem;
+}
+
+/* Order detail rows */
+.track-details {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.track-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Tracking link section (customer-app.html) */
+.tracking-link-card {
+  grid-column: 1 / -1;
+}
+
+.tracking-link-box {
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  word-break: break-all;
+}
+
+.tracking-link {
+  color: var(--primary-dark);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: underline;
+}
+
 @media (max-width: 640px) {
   .site-header {
     flex-direction: column;
@@ -935,4 +1161,1470 @@ textarea {
   .delivery-action {
     width: 100%;
   }
+}
+
+/* ==========================================================================
+   Admin Tab Navigation
+   ========================================================================== */
+
+.admin-tabs {
+  display: flex;
+  gap: 0.35rem;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 1.5rem;
+}
+
+.admin-tab {
+  padding: 0.6rem 1.4rem;
+  border-radius: 12px 12px 0 0;
+  border: 2px solid transparent;
+  border-bottom: 0;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+  cursor: pointer;
+  position: relative;
+  bottom: -2px;
+  font-size: 0.95rem;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.admin-tab:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.admin-tab.is-active {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+/* ==========================================================================
+   Insights — Layout helpers
+   ========================================================================== */
+
+.insights-full-width {
+  grid-column: 1 / -1;
+}
+
+.insights-empty {
+  padding: 2rem 0;
+  text-align: center;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Prep List Hero
+   ========================================================================== */
+
+.prep-hero {
+  text-align: center;
+  padding: 1.25rem 0 0.75rem;
+}
+
+.prep-hero__count {
+  font-size: clamp(4rem, 12vw, 7rem);
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.prep-hero__label {
+  margin-top: 0.35rem;
+  font-size: 1rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.prep-menu-title {
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin: 0.5rem 0 1.25rem;
+  font-style: italic;
+}
+
+.prep-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.prep-stat {
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 0.9rem 1rem;
+  text-align: center;
+}
+
+.prep-stat strong {
+  display: block;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.prep-stat span {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
+
+.prep-stat--confirmed strong { color: var(--success); }
+.prep-stat--pending strong   { color: var(--warning); }
+
+/* ==========================================================================
+   CSS Bar Chart (Peak Hour Heatmap)
+   ========================================================================== */
+
+.bar-chart {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.bar-chart__row {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr 4.8rem;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.bar-chart__label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: right;
+}
+
+.bar-chart__track {
+  background: rgba(76, 47, 34, 0.08);
+  border-radius: 4px;
+  height: 20px;
+  overflow: hidden;
+}
+
+.bar-chart__fill {
+  background: var(--primary);
+  height: 100%;
+  border-radius: 4px;
+  min-width: 2px;
+  transition: width 400ms ease;
+}
+
+.bar-chart__fill--peak {
+  background: var(--primary-dark);
+}
+
+.bar-chart__value {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Demand Forecast Card
+   ========================================================================== */
+
+.forecast-main {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.9rem;
+}
+
+.forecast-count {
+  font-size: 3.8rem;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1;
+  font-family: Georgia, "Times New Roman", serif;
+  flex-shrink: 0;
+}
+
+.forecast-tip {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.forecast-details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+}
+
+.forecast-detail {
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.7rem 0.85rem;
+  text-align: center;
+}
+
+.forecast-detail span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.forecast-detail strong {
+  display: block;
+  font-size: 1.4rem;
+  margin-top: 0.15rem;
+}
+
+/* ==========================================================================
+   Weekly Financial Summary Table
+   ========================================================================== */
+
+.weekly-table {
+  display: grid;
+  gap: 0.1rem;
+  overflow-x: auto;
+}
+
+.weekly-table__head,
+.weekly-table__row {
+  display: grid;
+  grid-template-columns: minmax(75px, 0.8fr) repeat(2, minmax(110px, 1fr)) minmax(110px, 1fr) minmax(95px, 0.8fr);
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.weekly-table__head {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--muted);
+  padding: 0 0.25rem 0.55rem;
+  border-bottom: 1px solid rgba(76, 47, 34, 0.24);
+}
+
+.weekly-table__row {
+  padding: 0.7rem 0.25rem;
+  border-bottom: 1px solid rgba(76, 47, 34, 0.1);
+  font-size: 0.88rem;
+}
+
+.weekly-table__row:last-child {
+  border-bottom: 0;
+}
+
+.weekly-cell--revenue {
+  font-weight: 800;
+  color: var(--success);
+}
+
+.weekly-cell--cancel {
+  color: var(--warning);
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .weekly-table__head {
+    display: none;
+  }
+
+  .weekly-table__row {
+    grid-template-columns: 1fr 1fr;
+    background: var(--surface-strong);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 0.9rem 1rem;
+  }
+}
+
+/* ==========================================================================
+   Offline / Sync status banner
+   ========================================================================== */
+
+.status-banner {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 0.45rem 1rem;
+  box-sizing: border-box;
+  display: none;
+}
+
+.status-banner[data-state="offline"] {
+  display: block;
+  background: #9f6918;
+  color: #fff;
+}
+
+.status-banner[data-state="syncing"] {
+  display: block;
+  background: var(--muted, #888);
+  color: #fff;
+}
+
+.status-banner[data-state="error"] {
+  display: block;
+  background: var(--primary-dark, #842f3d);
+  color: #fff;
+  cursor: pointer;
+}
+
+.status-banner[data-state="synced"] {
+  display: block;
+  background: #2e7d52;
+  color: #fff;
+}
+
+/* Non-blocking email warning — amber tone */
+.email-warning {
+  margin: 0.5rem 0 0;
+  padding: 0.6rem 0.9rem;
+  border-radius: 10px;
+  background: rgba(159, 105, 24, 0.13);
+  color: #9f6918;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+/* Deliveries feedback row above the orders table */
+.deliveries-feedback {
+  padding: 0.5rem 0;
+  min-height: 1.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--muted, #888);
+}
+
+/* ── Thermal Print (kitchen ticket) ──────────────────────────────── */
+/* Works in Chrome/Safari on desktop and mobile (Share → Print).      */
+@media print {
+  @page {
+    margin: 8mm 6mm;
+    size: auto;
+  }
+
+  /* Hide every decoration and hide the full page, then reveal only the
+     order rows so each one prints as a standalone kitchen ticket. */
+  body > *                { display: none !important; }
+  .site-shell             { display: block !important; }
+  .status-banner,
+  .site-header,
+  .site-footer,
+  .hero,
+  .card--menu,
+  .customer-order-card,
+  .tracking-link-card,
+  .delivery-table__head,
+  .customer-delivery-table__head { display: none !important; }
+
+  .site-shell,
+  .layout,
+  .delivery-table-card,
+  .customer-tracking-card,
+  .delivery-table,
+  .customer-delivery-table,
+  .delivery-table__body,
+  #buyersList             { display: block !important; width: 100% !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; border: none !important; background: #fff !important; }
+
+  /* Each order row becomes its own ticket, separated by a page break. */
+  .delivery-table__row {
+    display: block !important;
+    page-break-after: always;
+    break-after: page;
+    border: 2px solid #000 !important;
+    border-radius: 0 !important;
+    padding: 12px 14px !important;
+    margin: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  .delivery-table__row:last-child {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  /* Large buyer name — the most important item on the ticket. */
+  .buyer-name,
+  .delivery-name-card {
+    display: block !important;
+    font-size: 2.2rem !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.02em !important;
+    color: #000 !important;
+    margin-bottom: 6px !important;
+    line-height: 1.1 !important;
+  }
+
+  /* Simple meta line: payment method + status. */
+  .buyer-meta,
+  .delivery-order-meta {
+    display: block !important;
+    font-size: 1rem !important;
+    color: #333 !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Show order and payment status as plain text. */
+  .delivery-table__cell  { display: block !important; padding: 2px 0 !important; }
+  .delivery-order-status-pill,
+  .delivery-payment-status {
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    color: #000 !important;
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+
+  /* De-emphasise timestamps; hide delivery badge (not needed in kitchen). */
+  .delivery-status-time  { font-size: 0.8rem !important; color: #555 !important; margin: 0 !important; }
+  .customer-delivery-badge,
+  .customer-delivered-at { display: none !important; }
+}
+
+
+/* ================================================================
+   WEEKLY SCHEDULING — new components (migration 010)
+   ================================================================ */
+
+/* ── Week grid (management planning) ────────────────────────── */
+
+.week-grid {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  scrollbar-width: thin;
+}
+
+.week-grid__card {
+  flex: 0 0 auto;
+  min-width: 120px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.week-grid__card.is-active {
+  border-color: var(--primary);
+  background: #fff4f5;
+}
+
+.week-grid__card.is-today {
+  box-shadow: 0 0 0 1px var(--secondary);
+}
+
+.week-grid__card.is-no-menu {
+  opacity: 0.55;
+}
+
+.week-grid__btn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  border-radius: 8px;
+}
+
+.week-grid__btn:hover {
+  background: rgba(163, 61, 77, 0.06);
+}
+
+.week-grid__day-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.week-grid__day-name em {
+  font-style: normal;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.week-grid__menu-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
+.week-grid__price {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* ── Day tabs (customer ordering) ───────────────────────────── */
+
+.card--week-nav {
+  padding: 1rem 1.25rem 0.85rem;
+}
+
+.card--week-nav .eyebrow {
+  margin: 0 0 0.6rem;
+}
+
+.week-tabs {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  scrollbar-width: thin;
+}
+
+.week-tab {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 72px;
+  padding: 0.55rem 0.7rem;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+  color: var(--text);
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.week-tab.is-active {
+  border-color: var(--primary);
+  background: #fff4f5;
+  color: var(--primary-dark);
+}
+
+.week-tab.is-no-menu {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.week-tab.is-closed {
+  opacity: 0.7;
+}
+
+.week-tab--loading {
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  border: none;
+  background: none;
+}
+
+.week-tab__day {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.week-tab__day em {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.week-tab__status {
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.week-tab.is-active .week-tab__status {
+  color: var(--primary);
+}
+
+/* ── Delivery date toggle (kitchen view) ────────────────────── */
+
+.delivery-date-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.delivery-date-btn {
+  padding: 0.5rem 1.1rem;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.delivery-date-btn.is-active {
+  border-color: var(--primary);
+  color: var(--primary-dark);
+  background: #fff4f5;
+}
+
+.delivery-date-btn:hover:not(.is-active) {
+  border-color: var(--secondary);
+  color: var(--text);
+}
+
+/* ── Manual Sale Button & Hero Actions ──────────────────────── */
+
+.admin-hero__actions {
+  margin-top: 1.25rem;
+}
+
+.manual-sale-btn {
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0.85rem 1.5rem;
+  letter-spacing: 0.01em;
+}
+
+/* ── Walk-in Channel Badge ────────────────────────────────────── */
+
+.channel-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  margin-left: 0.4rem;
+}
+
+.channel-badge--walk-in {
+  background: rgba(159, 105, 24, 0.13);
+  color: var(--warning);
+  border: 1px solid rgba(159, 105, 24, 0.25);
+}
+
+/* ── Manual Sale Modal ────────────────────────────────────────── */
+
+.manual-sale-dialog {
+  border: 0;
+  border-radius: 20px;
+  padding: 0;
+  background: var(--surface);
+  box-shadow: 0 24px 60px rgba(76, 47, 34, 0.18);
+  max-width: 440px;
+  width: calc(100% - 2rem);
+  overflow: hidden;
+}
+
+.manual-sale-dialog::backdrop {
+  background: rgba(45, 34, 28, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.manual-sale-dialog__header {
+  padding: 1.75rem 2rem 0;
+}
+
+.manual-sale-dialog__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.5rem;
+  color: var(--text);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.manual-sale-dialog__subtitle {
+  margin: 0 0 1.5rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.manual-sale-dialog__form {
+  padding: 0 2rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.manual-sale-dialog__label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.manual-sale-dialog__optional {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.manual-sale-dialog__input {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  font-size: 1rem;
+  font-family: inherit;
+  background: var(--surface-strong);
+  color: var(--text);
+  transition: border-color 0.15s;
+}
+
+.manual-sale-dialog__input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.manual-sale-dialog__fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.manual-sale-dialog__legend {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+  margin-bottom: 0.1rem;
+}
+
+.manual-sale-dialog__payment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.manual-sale-payment-option {
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(131, 47, 61, 0.22);
+  background: var(--surface-strong);
+  color: var(--primary-dark);
+  font-weight: 700;
+  font-size: 1rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.manual-sale-payment-option:hover {
+  background: #f6e2e5;
+}
+
+.manual-sale-payment-option.is-selected {
+  background: var(--primary-dark);
+  color: #fffaf5;
+  border-color: var(--primary-dark);
+}
+
+.manual-sale-dialog__actions {
+  display: flex;
+  gap: 0.65rem;
+}
+
+.manual-sale-dialog__confirm {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.manual-sale-dialog__cancel {
+  font-size: 1rem;
+}
+
+.manual-sale-dialog__feedback {
+  margin: 0;
+  min-height: 1.4rem;
+  font-size: 0.9rem;
+}
+
+/* ── Meal packages & credits ──────────────────────────────── */
+
+.card--packages {
+  grid-column: 1 / -1;
+}
+
+.packages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.package-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1rem;
+  border-radius: 18px;
+  border: 2px solid var(--border);
+  background: var(--surface-strong);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.package-card:hover,
+.package-card:focus-visible {
+  border-color: rgba(131, 47, 61, 0.4);
+  background: #fdf0f2;
+}
+
+.package-card.is-selected {
+  border-color: var(--primary-dark);
+  background: #fdf0f2;
+}
+
+.package-card__title {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.package-card__count {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.package-card__price {
+  margin-top: 0.4rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--primary-dark);
+}
+
+.package-selected-label {
+  margin: 0;
+  padding: 0.6rem 1rem;
+  border-radius: 12px;
+  background: rgba(163, 61, 77, 0.08);
+  color: var(--primary-dark);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* Credit balance badge under email field */
+.credit-balance-badge {
+  display: inline-block;
+  margin-top: 0.2rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(45, 127, 94, 0.12);
+  color: var(--success);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* Full-width credit payment button when shown alongside SINPE + Efectivo */
+.payment-option--credit {
+  grid-column: 1 / -1;
+  background: rgba(45, 127, 94, 0.08);
+  border-color: rgba(45, 127, 94, 0.3);
+  color: var(--success);
+}
+
+.payment-option--credit:hover,
+.payment-option--credit:focus-visible {
+  background: rgba(45, 127, 94, 0.15);
+}
+
+.payment-option--credit.is-selected {
+  background: var(--success);
+  color: #fff;
+  border-color: var(--success);
+}
+
+
+/* ================================================================
+   ACCOUNTING / BUSINESS INTELLIGENCE MODULE
+   ================================================================ */
+
+/* Month picker + export controls */
+.accounting-controls {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.accounting-month-input {
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.accounting-month-input:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Optional field hint text */
+.field-optional {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 0.3rem;
+}
+
+/* KPI cards grid */
+.accounting-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.kpi-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.kpi-card--highlight {
+  background: rgba(163, 61, 77, 0.06);
+  border-color: rgba(163, 61, 77, 0.18);
+}
+
+.kpi-card__label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.kpi-card__value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.kpi-card__sub {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* Stability bar (A-la-carte vs Packages) */
+.stability-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.stability-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.stability-bar {
+  display: flex;
+  height: 22px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--border);
+}
+
+.stability-bar__fill {
+  transition: width 0.4s ease;
+}
+
+.stability-bar__fill--alacarte {
+  background: var(--secondary);
+}
+
+.stability-bar__fill--package {
+  background: var(--success);
+}
+
+.stability-note {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* Recommendation cards */
+.rec-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rec-card {
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  border-left: 4px solid transparent;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.rec-card--high {
+  border-left-color: var(--primary);
+  background: rgba(163, 61, 77, 0.04);
+}
+
+.rec-card--medium {
+  border-left-color: var(--warning);
+  background: rgba(159, 105, 24, 0.04);
+}
+
+.rec-card--info {
+  border-left-color: var(--success);
+  background: rgba(45, 127, 94, 0.04);
+}
+
+.rec-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.rec-card__badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(45, 34, 28, 0.08);
+  color: var(--muted);
+}
+
+.rec-card--high   .rec-card__badge { background: rgba(163, 61, 77, 0.12);  color: var(--primary-dark); }
+.rec-card--medium .rec-card__badge { background: rgba(159, 105, 24, 0.12); color: var(--warning); }
+.rec-card--info   .rec-card__badge { background: rgba(45, 127, 94, 0.12);  color: var(--success); }
+
+.rec-card__title {
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.rec-card__body {
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Daily breakdown table */
+.acc-daily-table {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.acc-daily-head,
+.acc-daily__row {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  align-items: start;
+}
+
+.acc-daily-head {
+  grid-template-columns: 2fr 1.2fr 1.5fr 1.4fr 1fr;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.acc-daily__row {
+  grid-template-columns: 2fr 1.2fr 1.5fr 1.4fr 1fr;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.acc-daily__row:last-child {
+  border-bottom: none;
+}
+
+.acc-daily__row:hover {
+  background: rgba(163, 61, 77, 0.03);
+}
+
+.acc-daily__date strong {
+  font-size: 0.9rem;
+}
+
+.acc-daily__meals strong {
+  font-size: 1rem;
+}
+
+.acc-waste {
+  color: var(--muted);
+}
+
+.acc-waste--low {
+  color: var(--warning);
+}
+
+.acc-waste--high {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.acc-profit--pos {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.acc-profit--neg {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.pkg-badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(45, 127, 94, 0.12);
+  color: var(--success);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* Daily table — 4-col variant (no cost column) */
+.acc-daily-head:not(:has(span:nth-child(4) ~ span)),
+.acc-daily__row:not(:has(span:nth-child(4) ~ span)) {
+  grid-template-columns: 2fr 1.2fr 1.5fr 1fr;
+}
+
+@media (max-width: 640px) {
+  .acc-daily-head,
+  .acc-daily__row {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.3rem;
+  }
+  .acc-daily-head span:nth-child(n+3),
+  .acc-daily__row span:nth-child(n+3) {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--border);
+    padding-top: 0.3rem;
+  }
+  .accounting-kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ==========================================================================
+   Kitchen High-Contrast Mode — deliveries.html
+   Designed for long-distance reading (~2 m) on tablets/phones under bright
+   kitchen lighting. Every action reachable in ≤ 3 taps from this screen.
+   ========================================================================== */
+
+/* Buyer name — bold, inverted, legible at distance */
+.delivery-page .delivery-name-card {
+  font-size: clamp(1.65rem, 3.2vw, 2.5rem);
+  font-weight: 900;
+  background: #1c1208;
+  color: #f5f0e8;
+  padding: 0.55rem 0.9rem;
+  border-radius: 8px;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  word-break: break-word;
+}
+
+/* Layout wrapper so order-number badge sits inline with name */
+.delivery-name-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* Short order-ID badge (#XXXXX) next to the name */
+.delivery-order-number {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  background: var(--primary);
+  color: #fff;
+  padding: 0.18rem 0.45rem;
+  border-radius: 3px;
+  letter-spacing: 0.08em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* Summary counters — bigger digits for at-a-glance scanning */
+.delivery-page .delivery-summary strong {
+  font-size: clamp(2.4rem, 5vw, 3.2rem);
+}
+
+/* Give the name column more real-estate */
+.delivery-page .delivery-table__head,
+.delivery-page .delivery-table__row {
+  grid-template-columns:
+    minmax(260px, 1.5fr)
+    minmax(140px, 0.65fr)
+    minmax(200px, 0.85fr)
+    minmax(140px, 0.6fr)
+    minmax(210px, 0.9fr);
+}
+
+/* Taller rows → easier to find an order at a glance */
+.delivery-page .delivery-table__row {
+  padding: 1.1rem 0.15rem;
+}
+
+.delivery-page .delivery-table__cell {
+  grid-template-rows: minmax(4.5rem, auto) minmax(2.6rem, auto);
+}
+
+/* ── Three-Tap action buttons ─────────────────────────────────── */
+
+.delivery-page .delivery-action {
+  min-height: 4.8rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: transform 80ms ease, box-shadow 80ms ease, background 80ms ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Tactile "press" feedback on touch */
+.delivery-page .delivery-action:active {
+  transform: scale(0.94);
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.22);
+}
+
+/* SINPE verify — high-visibility amber so it's never missed */
+.delivery-page .delivery-action--sinpe-verify {
+  background: #f0a800;
+  border-color: #c88200;
+  color: #1a0e00;
+}
+
+.delivery-page .delivery-action--sinpe-verify:active {
+  background: #c88200;
+}
+
+/* Date-toggle — larger tap target */
+.delivery-page .delivery-date-btn {
+  min-height: 3rem;
+  padding: 0.65rem 1.4rem;
+  font-size: 0.95rem;
+}
+
+/* ── Quick-Add ("+ Venta directa") toolbar button ─────────────── */
+
+.quick-add-btn {
+  background: var(--success);
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 0.75rem 1.3rem;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.quick-add-btn:hover,
+.quick-add-btn:focus-visible {
+  background: #256b4f;
+  transform: translateY(-1px);
+}
+
+.quick-add-btn:active {
+  transform: scale(0.96);
+}
+
+/* ==========================================================================
+   Quick-Add Walk-in POS Dialog
+   Defaults: Cash + Today. Max 3 taps: open → (name) → Confirm.
+   Buttons are oversized for greasy/gloved hands in a kitchen environment.
+   ========================================================================== */
+
+.quick-add-dialog {
+  border: 0;
+  border-radius: 24px;
+  padding: 0;
+  background: var(--surface);
+  box-shadow: 0 28px 70px rgba(76, 47, 34, 0.2);
+  max-width: 460px;
+  width: calc(100% - 2rem);
+  overflow: hidden;
+}
+
+.quick-add-dialog::backdrop {
+  background: rgba(45, 34, 28, 0.62);
+  backdrop-filter: blur(3px);
+}
+
+.quick-add-dialog__header {
+  padding: 1.75rem 2rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.quick-add-dialog__title {
+  margin: 0 0 0.3rem;
+  font-size: 1.6rem;
+  color: var(--text);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.quick-add-dialog__subtitle {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.quick-add-dialog__form {
+  padding: 1.5rem 2rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+}
+
+.quick-add-dialog__label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.quick-add-dialog__optional {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.quick-add-dialog__input {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  font-size: 1.1rem;
+  font-family: inherit;
+  background: var(--surface-strong);
+  color: var(--text);
+  transition: border-color 0.15s;
+}
+
+.quick-add-dialog__input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.quick-add-dialog__fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.quick-add-dialog__legend {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+/* Payment method — large touch targets, no mis-taps */
+.qa-payment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.qa-payment-option {
+  min-height: 5.5rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+  border-radius: 16px;
+  border: 2px solid rgba(131, 47, 61, 0.22);
+  background: var(--surface-strong);
+  color: var(--primary-dark);
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 80ms ease, background 80ms ease, border-color 80ms ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.qa-payment-option:active {
+  transform: scale(0.95);
+}
+
+.qa-payment-option.is-selected {
+  background: var(--primary-dark);
+  color: #fffaf5;
+  border-color: var(--primary-dark);
+  box-shadow: 0 4px 14px rgba(131, 47, 61, 0.28);
+}
+
+.quick-add-dialog__actions {
+  display: flex;
+  gap: 0.65rem;
+}
+
+/* Confirm — full-width, large, impossible to miss */
+.quick-add-dialog__confirm {
+  flex: 1;
+  min-height: 4.5rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  border-radius: 14px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: transform 80ms ease, background 80ms ease;
+}
+
+.quick-add-dialog__confirm:active {
+  transform: scale(0.97);
+}
+
+.quick-add-dialog__cancel {
+  font-size: 1rem;
+  min-height: 4.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 14px;
+}
+
+.quick-add-dialog__feedback {
+  margin: 0;
+  min-height: 1.4rem;
+  font-size: 0.9rem;
 }

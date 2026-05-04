@@ -1,101 +1,93 @@
-import { getDb } from "../lib/mongodb.js";
-import { buildDashboardSnapshot, getDayKey, getTodayOrdersQuery } from "../lib/dashboard.js";
-import { handleOptions, setCors } from "../lib/http.js";
+import { handleOptions, setCors }                                    from "../lib/http.js";
+import { getDayKey, getUpcomingDayKeys, buildDashboardSnapshot }     from "../lib/dashboard.js";
+import { requireAuth }                                               from "../lib/auth.js";
+import { upsert as upsertMenu, findActive, findWeek }                from "../data/menus.repo.js";
+import { findToday, getStats }                                       from "../data/orders.repo.js";
+import { getSettings }                                               from "../data/settings.repo.js";
 
 function validateMenu(menu) {
   if (!menu.title || !menu.description) {
     throw new Error("Faltan datos obligatorios del menu.");
   }
-
-  if (Number(menu.price) < 0) {
-    throw new Error("El precio no puede ser negativo.");
+  if (!Number.isFinite(Number(menu.price)) || Number(menu.price) < 0) {
+    throw new Error("El precio debe ser un número válido mayor o igual a 0.");
   }
 }
 
-function resolveMenuAccessPassword(req) {
-  return String(
-    req.body?.adminSecret ||
-    req.body?.accessPassword ||
-    ""
-  ).trim();
-}
-
-function getMenuAccessRole(password) {
-  const adminSecret = String(process.env.ADMIN_SECRET || "");
-  const helperPassword = String(process.env.HELPER_PASSWORD || "");
-
-  if (password && adminSecret && password === adminSecret) return "ADMIN";
-  if (password && helperPassword && password === helperPassword) return "HELPER";
-  return "";
+function validateDayKey(dayKey) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) throw new Error("Fecha inválida.");
+  if (dayKey < getDayKey()) throw new Error("No se pueden configurar menús para fechas pasadas.");
 }
 
 export default async function handler(req, res) {
   if (handleOptions(req, res)) return;
   setCors(res);
 
+  // ── GET: weekly menu grid for the management planning view ────────
+  if (req.method === "GET") {
+    try {
+      const { cafeteriaId } = await requireAuth(req, ["ADMIN", "HELPER"]);
+      const dayKeys = getUpcomingDayKeys(7);
+      const menus   = await findWeek(cafeteriaId, dayKeys[0], dayKeys[dayKeys.length - 1]);
+
+      const menuByDay = {};
+      menus.forEach((m) => { menuByDay[m.day_key] = m; });
+
+      const weekMenus = dayKeys.map((date) => ({
+        date,
+        menu: menuByDay[date] || null
+      }));
+
+      return res.status(200).json({ ok: true, weekMenus });
+    } catch (error) {
+      if (error.status) return res.status(error.status).json({ ok: false, message: error.message });
+      return res.status(400).json({ ok: false, message: error.message || "Error al cargar menús semanales." });
+    }
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ ok: false, message: "Method not allowed" });
   }
 
   try {
-    const accessPassword = resolveMenuAccessPassword(req);
-    const validateOnly = Boolean(req.body?.validateOnly);
-    const accessRole = getMenuAccessRole(accessPassword);
+    const { role, cafeteriaId } = await requireAuth(req, ["ADMIN", "HELPER"]);
 
-    if (!process.env.ADMIN_SECRET && !process.env.HELPER_PASSWORD) {
-      return res.status(500).json({ ok: false, message: "Missing menu access password in Vercel." });
+    if (Boolean(req.body?.validateOnly)) {
+      return res.status(200).json({ ok: true, message: "Acceso autorizado.", role });
     }
 
-    if (!accessRole) {
-      return res.status(401).json({ ok: false, message: "Clave incorrecta para menu." });
-    }
+    const menuInput = req.body?.menu || {};
+    validateMenu(menuInput);
 
-    if (validateOnly) {
-      return res.status(200).json({ ok: true, message: "Acceso autorizado.", role: accessRole });
-    }
+    // Accept an explicit dayKey from the body for weekly scheduling.
+    // Falls back to today for backward compatibility.
+    const dayKey = String(req.body?.dayKey || getDayKey()).trim();
+    validateDayKey(dayKey);
 
-    const menu = req.body?.menu || {};
-    validateMenu(menu);
+    const menu = await upsertMenu(cafeteriaId, dayKey, {
+      title:       String(menuInput.title).trim(),
+      description: String(menuInput.description).trim(),
+      price:       Number(menuInput.price),
+      costPerDish: menuInput.cost !== undefined ? menuInput.cost : menuInput.costPerDish
+    });
 
-    const db = await getDb();
-    const dayKey = getDayKey();
-
-    await db.collection("menus").updateMany(
-      { active: true, dayKey: { $ne: dayKey } },
-      { $set: { active: false } }
-    );
-
-    await db.collection("menus").updateOne(
-      { dayKey },
-      {
-        $set: {
-          dayKey,
-          title: String(menu.title).trim(),
-          description: String(menu.description).trim(),
-          price: Number(menu.price || 0),
-          active: true,
-          updatedAt: new Date()
-        }
-      },
-      { upsert: true }
-    );
-
-    const settingsDoc = await db.collection("settings").findOne({ key: "app_config" });
-    const menuDoc = await db.collection("menus").findOne({ dayKey, active: true });
-    const orders = await db.collection("orders")
-      .find(getTodayOrdersQuery(dayKey))
-      .sort({ createdAt: 1 })
-      .toArray();
+    const [settings, freshMenu, orders, stats] = await Promise.all([
+      getSettings(cafeteriaId),
+      findActive(cafeteriaId, dayKey),
+      findToday(cafeteriaId, dayKey),
+      getStats(cafeteriaId, dayKey)
+    ]);
 
     return res.status(200).json({
-      ok: true,
-      message: "Menu del dia guardado correctamente.",
-      snapshot: buildDashboardSnapshot(settingsDoc || {}, menuDoc || {}, orders)
+      ok:       true,
+      message:  "Menú guardado correctamente.",
+      dayKey,
+      snapshot: buildDashboardSnapshot(settings, freshMenu || menu, orders, stats)
     });
   } catch (error) {
-    return res.status(400).json({
-      ok: false,
-      message: error.message || "No se pudo guardar el menu."
-    });
+    if (error.status) {
+      return res.status(error.status).json({ ok: false, message: error.message });
+    }
+    return res.status(400).json({ ok: false, message: error.message || "No se pudo guardar el menu." });
   }
 }

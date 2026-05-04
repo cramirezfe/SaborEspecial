@@ -1,6 +1,32 @@
-import { getDb } from "../lib/mongodb.js";
-import { buildDashboardSnapshot, getDayKey, getTodayOrdersQuery } from "../lib/dashboard.js";
-import { handleOptions, setCors } from "../lib/http.js";
+import { handleOptions, setCors }                                       from "../lib/http.js";
+import {
+  getDayKey, buildDashboardSnapshot,
+  getUpcomingDayKeys, isCutoffPassedForDate
+} from "../lib/dashboard.js";
+import { requireAuth }                                                   from "../lib/auth.js";
+import { findBySlug }                                                    from "../data/cafeterias.repo.js";
+import { findActive as findActiveMenu, findWeek }                        from "../data/menus.repo.js";
+import { findToday, getStats }                                           from "../data/orders.repo.js";
+import { getSettings }                                                   from "../data/settings.repo.js";
+
+const DAY_NAMES_ES = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+// Resolves the cafeteria identity from either an auth token (staff views)
+// or a public ?slug= parameter (customer-facing page).
+async function resolveCafeteriaId(req) {
+  const authHeader = String(req.headers["authorization"] || "");
+  if (authHeader.startsWith("Bearer ")) {
+    const { cafeteriaId } = await requireAuth(req, ["ADMIN", "HELPER", "ORDERS"]);
+    return cafeteriaId;
+  }
+
+  const slug = String(req.query?.slug || "").toLowerCase().trim();
+  if (!slug) throw { status: 400, message: "Parámetro 'slug' requerido." };
+
+  const cafeteria = await findBySlug(slug);
+  if (!cafeteria) throw { status: 404, message: "Cafetería no encontrada." };
+  return cafeteria.id;
+}
 
 export default async function handler(req, res) {
   if (handleOptions(req, res)) return;
@@ -11,21 +37,56 @@ export default async function handler(req, res) {
   }
 
   try {
-    const db = await getDb();
-    const dayKey = getDayKey();
+    const cafeteriaId = await resolveCafeteriaId(req);
+    const dayKey      = getDayKey();
 
-    const settingsDoc = await db.collection("settings").findOne({ key: "app_config" });
-    const menuDoc = await db.collection("menus").findOne({ dayKey, active: true });
-    const orders = await db.collection("orders")
-      .find(getTodayOrdersQuery(dayKey))
-      .sort({ createdAt: 1 })
-      .toArray();
+    const [settings, menu, orders, stats] = await Promise.all([
+      getSettings(cafeteriaId),
+      findActiveMenu(cafeteriaId, dayKey),
+      findToday(cafeteriaId, dayKey),
+      getStats(cafeteriaId, dayKey)
+    ]);
 
-    return res.status(200).json(buildDashboardSnapshot(settingsDoc || {}, menuDoc || {}, orders));
+    const snapshot = buildDashboardSnapshot(settings || {}, menu || {}, orders, stats);
+
+    // ?week=true — adds weekly menu data for the customer's day-selector UI.
+    if (req.query?.week === "true") {
+      const dayKeys      = getUpcomingDayKeys(7);
+      const weekMenuRows = await findWeek(cafeteriaId, dayKeys[0], dayKeys[dayKeys.length - 1]);
+
+      // Fetch per-day sold counts in parallel to compute per-day availability.
+      const weekStats = await Promise.all(dayKeys.map((d) => getStats(cafeteriaId, d)));
+
+      const menuByDay = {};
+      weekMenuRows.forEach((m) => { menuByDay[m.day_key] = m; });
+
+      const maxMeals = Number(settings.max_meals || 15);
+
+      snapshot.weekMenus = dayKeys.map((date, i) => {
+        const dayMenu = menuByDay[date] || null;
+        const sold    = weekStats[i].totalOrders;
+        const avail   = Math.max(maxMeals - sold, 0);
+        // Parse date at noon UTC so getUTCDay() is day-stable in all TZs.
+        const d       = new Date(date + "T12:00:00Z");
+
+        return {
+          date,
+          dayLabel:       DAY_NAMES_ES[d.getUTCDay()],
+          isToday:        date === dayKey,
+          isOrderingOpen: !isCutoffPassedForDate(settings, date) && avail > 0 && !!dayMenu,
+          availableMeals: avail,
+          menu:           dayMenu
+            ? { title: dayMenu.title, description: dayMenu.description, price: Number(dayMenu.price) }
+            : null
+        };
+      });
+
+      snapshot.cutoffTime = String(settings.cutoff_time || "09:00").slice(0, 5);
+    }
+
+    return res.status(200).json(snapshot);
   } catch (error) {
-    return res.status(500).json({
-      ok: false,
-      message: error.message || "Unexpected server error."
-    });
+    const status = error.status || 500;
+    return res.status(status).json({ ok: false, message: error.message || "Unexpected server error." });
   }
 }

@@ -1,99 +1,79 @@
-import { getDb } from "../lib/mongodb.js";
-import { getDayKey, getTodayOrdersQuery } from "../lib/dashboard.js";
-import { handleOptions, setCors } from "../lib/http.js";
-import { ObjectId } from "mongodb";
+import { handleOptions, setCors }                            from "../lib/http.js";
+import { getDayKey }                                         from "../lib/dashboard.js";
+import { requireAuth }                                       from "../lib/auth.js";
+import { sendOrderStatusEmail }                              from "../lib/email.js";
+import { findActive as findActiveMenu }                      from "../data/menus.repo.js";
+import {
+  findToday, getStats, findById,
+  updateDelivery, updatePayment, logDeliveryEvent
+} from "../data/orders.repo.js";
+import { getDeliveryWindowConfig }                           from "../data/settings.repo.js";
 
-function getOrdersPassword(req) {
-  return String(req.headers["x-orders-password"] || req.headers["x-access-password"] || "");
-}
+const VALID_DELIVERY_STATUSES = [
+  "PENDIENTE_ENTREGA",
+  "EN_PREPARACION",
+  "LISTO_PARA_ENTREGA",
+  "ENTREGADO"
+];
 
-function ensureAuthorized(req, res) {
-  const ordersPassword = String(process.env.ORDERS_PASSWORD || "");
-  const helperPassword = String(process.env.HELPER_PASSWORD || "");
-  if (!ordersPassword && !helperPassword) {
-    res.status(500).json({ ok: false, message: "Missing delivery access password in Vercel." });
-    return false;
-  }
-
-  const suppliedPassword = getOrdersPassword(req);
-  if (suppliedPassword !== ordersPassword && suppliedPassword !== helperPassword) {
-    res.status(401).json({ ok: false, message: "Clave de entregas incorrecta." });
-    return false;
-  }
-
-  return true;
-}
+const PAID_STATUSES = ["PAGADO", "CONFIRMADO", "CONFIRMADO_SINPE", "PENDIENTE_DE_PAGO"];
 
 function formatTimestamp(value) {
   if (!value) return "";
-
   const parts = new Intl.DateTimeFormat("es-CR", {
     timeZone: "America/Costa_Rica",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true
+    hour:     "numeric",
+    minute:   "2-digit",
+    hour12:   true
   }).formatToParts(new Date(value));
-
-  function get(type) {
-    const part = parts.find((item) => item.type === type);
-    return part ? part.value : "";
-  }
-
-  const dayPeriod = get("dayPeriod").replace(/\./g, "").toUpperCase();
-  return `${get("hour")}:${get("minute")} ${dayPeriod}`;
+  const get = (t) => (parts.find((p) => p.type === t) || {}).value || "";
+  return `${get("hour")}:${get("minute")} ${get("dayPeriod").replace(/\./g, "").toUpperCase()}`;
 }
 
-function formatDateTime(value) {
-  if (!value) return "";
-
-  return formatTimestamp(value);
-}
-
-function getPaymentStatusLabel(paymentStatus) {
-  const normalized = String(paymentStatus || "").toUpperCase();
-  if (["PAGADO", "CONFIRMADO", "CONFIRMADO_SINPE"].includes(normalized)) {
-    return "PAGADO";
-  }
+function normalizePayment(status) {
+  const s = String(status || "").toUpperCase();
+  if (s === "PAGADO" || s === "CONFIRMADO" || s === "CONFIRMADO_SINPE") return "PAGADO";
   return "PENDIENTE DE PAGO";
 }
 
-function buildDeliveriesSnapshot(settingsDoc, menuDoc, orders) {
-  const totalOrders = orders.length;
-  const paidOrders = orders.filter((item) => getPaymentStatusLabel(item.paymentStatus) === "PAGADO").length;
-  const pendingPaymentCount = Math.max(totalOrders - paidOrders, 0);
-  const deliveredOrders = orders.filter((item) => item.deliveryStatus === "ENTREGADO").length;
-  const pendingDeliveries = Math.max(totalOrders - deliveredOrders, 0);
-  const paidPendingDeliveryCount = orders.filter((item) =>
-    getPaymentStatusLabel(item.paymentStatus) === "PAGADO" && item.deliveryStatus !== "ENTREGADO"
-  ).length;
+async function buildSnapshot(cafeteriaId, targetDate) {
+  const [s, menu, orders, stats] = await Promise.all([
+    getDeliveryWindowConfig(cafeteriaId),
+    findActiveMenu(cafeteriaId, targetDate),
+    findToday(cafeteriaId, targetDate),
+    getStats(cafeteriaId, targetDate)
+  ]);
 
   return {
-    ok: true,
-    updatedAt: new Date().toISOString(),
-    totalOrders,
-    pendingPaymentCount,
-    paidOrders,
-    paidPendingDeliveryCount,
-    pendingDeliveries,
-    deliveredOrders,
-    salesWindow: `${settingsDoc?.salesStart || "10:00"} - ${settingsDoc?.salesEnd || "12:00"}`,
-    deliveryWindow: settingsDoc?.deliveryWindow || "12:00 - 12:30",
+    ok:                       true,
+    updatedAt:                new Date().toISOString(),
+    targetDate,
+    totalOrders:              stats.totalOrders,
+    paidOrders:               stats.paidOrders,
+    pendingPaymentCount:      stats.pendingPayment,
+    deliveredOrders:          stats.deliveredOrders,
+    pendingDeliveries:        stats.pendingDeliveries,
+    paidPendingDeliveryCount: stats.paidPendingDelivery,
+    salesWindow:              `${s.sales_start || "10:00"} - ${s.sales_end || "12:00"}`,
+    deliveryWindow:           s.delivery_window || "12:00 - 12:30",
     menu: {
-      title: menuDoc?.title || "Menu no configurado",
-      description: menuDoc?.description || "",
-      price: Number(menuDoc?.price || 1000)
+      title:       menu?.title       || "Menu no configurado",
+      description: menu?.description || "",
+      price:       Number(menu?.price || 1000)
     },
-    orders: orders.map((item) => ({
-      id: String(item._id),
-      buyerName: item.buyerName,
-      paymentMethod: item.paymentMethod,
-      paymentStatus: getPaymentStatusLabel(item.paymentStatus),
-      orderStatus: item.orderStatus || "SOLICITADO",
-      deliveryStatus: item.deliveryStatus || "PENDIENTE_ENTREGA",
-      timestampLabel: formatTimestamp(item.createdAt),
-      createdAtLabel: formatDateTime(item.createdAt),
-      paymentConfirmedAtLabel: item.paymentConfirmedAt ? formatDateTime(item.paymentConfirmedAt) : "",
-      deliveredAtLabel: item.deliveredAt ? formatDateTime(item.deliveredAt) : ""
+    orders: orders.map((o) => ({
+      id:                      o.id,
+      buyerName:               o.buyer_name,
+      paymentMethod:           o.payment_method,
+      paymentStatus:           normalizePayment(o.payment_status),
+      orderStatus:             o.order_status    || "SOLICITADO",
+      deliveryStatus:          o.delivery_status || "PENDIENTE_ENTREGA",
+      timestampLabel:          formatTimestamp(o.created_at),
+      createdAtLabel:          formatTimestamp(o.created_at),
+      paymentConfirmedAtLabel: o.payment_confirmed_at ? formatTimestamp(o.payment_confirmed_at) : "",
+      deliveredAtLabel:        o.delivered_at         ? formatTimestamp(o.delivered_at)          : "",
+      needsSinpeVerification:  o.payment_method === "SINPE" &&
+        !["PAGADO", "CONFIRMADO", "CONFIRMADO_SINPE"].includes(String(o.payment_status || "").toUpperCase())
     }))
   };
 }
@@ -103,81 +83,97 @@ export default async function handler(req, res) {
   setCors(res);
 
   if (req.method === "GET") {
-    if (!ensureAuthorized(req, res)) return;
-
     try {
-      const db = await getDb();
-      const dayKey = getDayKey();
-
-      const settingsDoc = await db.collection("settings").findOne({ key: "app_config" });
-      const menuDoc = await db.collection("menus").findOne({ dayKey, active: true });
-      const orders = await db.collection("orders")
-        .find(getTodayOrdersQuery(dayKey))
-        .sort({ createdAt: 1 })
-        .toArray();
-
-      return res.status(200).json(buildDeliveriesSnapshot(settingsDoc || {}, menuDoc || {}, orders));
-    } catch (error) {
-      return res.status(500).json({
-        ok: false,
-        message: error.message || "Unexpected server error."
-      });
+      const { cafeteriaId } = await requireAuth(req, ["ADMIN", "HELPER", "ORDERS"]);
+      // ?date=YYYY-MM-DD toggles the kitchen view between today and any target date.
+      const rawDate    = String(req.query?.date || "").trim();
+      const targetDate = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : getDayKey();
+      return res.status(200).json(await buildSnapshot(cafeteriaId, targetDate));
+    } catch (err) {
+      if (err.status) return res.status(err.status).json({ ok: false, message: err.message });
+      return res.status(500).json({ ok: false, message: err.message || "Unexpected server error." });
     }
   }
 
   if (req.method === "POST") {
-    if (!ensureAuthorized(req, res)) return;
-
     try {
-      const db = await getDb();
-      const dayKey = getDayKey();
-      const orderId = String(req.body?.orderId || "");
-      const deliveryStatus = String(req.body?.deliveryStatus || "");
+      const { cafeteriaId, userId } = await requireAuth(req, ["ADMIN", "HELPER", "ORDERS"]);
+      const orderId        = String(req.body?.orderId        || "");
+      const deliveryStatus = req.body?.deliveryStatus ? String(req.body.deliveryStatus) : null;
+      const paymentStatus  = req.body?.paymentStatus  ? String(req.body.paymentStatus)  : null;
 
-      if (!ObjectId.isValid(orderId)) {
-        return res.status(400).json({ ok: false, message: "Pedido invalido." });
+      if (!orderId) {
+        return res.status(400).json({ ok: false, message: "Pedido inválido." });
+      }
+      if (!deliveryStatus && !paymentStatus) {
+        return res.status(400).json({ ok: false, message: "Debe especificar deliveryStatus o paymentStatus." });
       }
 
-      if (!["PENDIENTE_ENTREGA", "ENTREGADO"].includes(deliveryStatus)) {
-        return res.status(400).json({ ok: false, message: "Estado de entrega invalido." });
+      // findById is no longer restricted to a specific day — the order may have
+      // been placed on a different day than the one being served.
+      const order = await findById(orderId, cafeteriaId);
+      if (!order) {
+        return res.status(404).json({ ok: false, message: "Pedido no encontrado." });
       }
 
-      const orderObjectId = new ObjectId(orderId);
+      // Return the snapshot for the order's own target_date so the kitchen
+      // view stays consistent with whatever date filter is in use.
+      const targetDate = order.target_date || getDayKey();
 
-      await db.collection("orders").updateOne(
-        { _id: orderObjectId, ...getTodayOrdersQuery(dayKey) },
-        {
-          $set: {
-            deliveryStatus,
-            deliveredAt: deliveryStatus === "ENTREGADO" ? new Date() : null
-          }
+      let emailStatus = null;
+      const appBaseUrl  = (process.env.APP_BASE_URL || "").replace(/\/$/, "");
+      const trackingUrl = appBaseUrl && order.tracking_token
+        ? `${appBaseUrl}/track.html?token=${order.tracking_token}`
+        : "";
+
+      if (deliveryStatus) {
+        if (!VALID_DELIVERY_STATUSES.includes(deliveryStatus)) {
+          return res.status(400).json({ ok: false, message: "Estado de entrega inválido." });
         }
-      );
+        await updateDelivery(orderId, cafeteriaId, deliveryStatus);
+        await logDeliveryEvent(cafeteriaId, orderId, targetDate, deliveryStatus);
 
-      await db.collection("delivery_events").insertOne({
-        orderId: orderObjectId,
-        dayKey,
-        deliveryStatus,
-        createdAt: new Date()
-      });
+        const NOTIFY_STATUSES = ["EN_PREPARACION", "LISTO_PARA_ENTREGA", "ENTREGADO"];
+        if (NOTIFY_STATUSES.includes(deliveryStatus) && order.buyer_email) {
+          emailStatus = await sendOrderStatusEmail({
+            to:         order.buyer_email,
+            buyerName:  order.buyer_name,
+            orderId:    order.id,
+            status:     deliveryStatus,
+            trackingUrl
+          });
+        }
+      }
 
-      const settingsDoc = await db.collection("settings").findOne({ key: "app_config" });
-      const menuDoc = await db.collection("menus").findOne({ dayKey, active: true });
-      const orders = await db.collection("orders")
-        .find(getTodayOrdersQuery(dayKey))
-        .sort({ createdAt: 1 })
-        .toArray();
+      if (paymentStatus) {
+        if (!PAID_STATUSES.includes(paymentStatus)) {
+          return res.status(400).json({ ok: false, message: "Estado de pago inválido." });
+        }
+        await updatePayment(orderId, cafeteriaId, paymentStatus, userId);
 
-      return res.status(200).json(buildDeliveriesSnapshot(settingsDoc || {}, menuDoc || {}, orders));
-    } catch (error) {
-      return res.status(500).json({
-        ok: false,
-        message: error.message || "Unexpected server error."
-      });
+        const isConfirming = ["PAGADO", "CONFIRMADO", "CONFIRMADO_SINPE"].includes(paymentStatus);
+        if (isConfirming && order.buyer_email) {
+          emailStatus = await sendOrderStatusEmail({
+            to:         order.buyer_email,
+            buyerName:  order.buyer_name,
+            orderId:    order.id,
+            status:     paymentStatus,
+            trackingUrl
+          });
+        }
+      }
+
+      const snapshot = await buildSnapshot(cafeteriaId, targetDate);
+      if (emailStatus && !emailStatus.sent) {
+        snapshot.emailWarning = "La actualización fue guardada, pero no se pudo enviar el correo al comprador.";
+      }
+
+      return res.status(200).json(snapshot);
+    } catch (err) {
+      if (err.status) return res.status(err.status).json({ ok: false, message: err.message });
+      return res.status(500).json({ ok: false, message: err.message || "Unexpected server error." });
     }
   }
 
-  if (req.method !== "GET" && req.method !== "POST") {
-    return res.status(405).json({ ok: false, message: "Method not allowed" });
-  }
+  return res.status(405).json({ ok: false, message: "Method not allowed" });
 }
