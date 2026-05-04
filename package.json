@@ -5,9 +5,9 @@
   "scripts": {
     "setup":    "bash setup.sh",
     "start":    "vercel dev",
-    "init-db":  "node scripts/migrate.js",
-    "db:seed":  "node scripts/seed.js",
-    "test":     "node scripts/test-integrity.js"
+    "init-db":  "sh -c 'set -a && [ -f .env.local ] && . .env.local; set +a; node scripts/migrate.js'",
+    "db:seed":  "sh -c 'set -a && [ -f .env.local ] && . .env.local; set +a; node scripts/seed.js'",
+    "test":     "sh -c 'set -a && [ -f .env.local ] && . .env.local; set +a; node scripts/test-integrity.js'"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4"
