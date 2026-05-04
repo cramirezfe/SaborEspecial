@@ -83,4 +83,22 @@
 
   redirectIfAuthenticated();
   els.form.addEventListener("submit", submitLogin);
+
+  // Dev-only: show demo credential shortcuts on localhost.
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    var hint = document.createElement("details");
+    hint.style.cssText = "margin-top:1.25rem;font-size:.85rem;border:1px dashed #c0a090;border-radius:6px;padding:.6rem .9rem;background:#fdf8f5;color:#705d52;";
+    hint.innerHTML = [
+      "<summary style='cursor:pointer;font-weight:600;'>Cuentas demo (desarrollo local)</summary>",
+      "<ul style='margin:.6rem 0 .4rem 1.1rem;line-height:1.8;'>",
+      "  <li><b>admin@demo.local</b> / <b>demo1234</b>",
+      "    <button type='button' style='margin-left:.5rem;font-size:.75rem;padding:1px 7px;cursor:pointer;' onclick=\"document.getElementById('loginEmail').value='admin@demo.local';document.getElementById('loginPassword').value='demo1234';\">Usar</button>",
+      "  </li>",
+      "  <li><b>cocina@demo.local</b> / <b>demo1234</b>",
+      "    <button type='button' style='margin-left:.5rem;font-size:.75rem;padding:1px 7px;cursor:pointer;' onclick=\"document.getElementById('loginEmail').value='cocina@demo.local';document.getElementById('loginPassword').value='demo1234';\">Usar</button>",
+      "  </li>",
+      "</ul>",
+    ].join("");
+    els.form.parentNode.appendChild(hint);
+  }
 })();
